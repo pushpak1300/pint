@@ -11,7 +11,6 @@ class EmailView
     {
         $path = str_replace('\\', '/', $path);
 
-        return str_contains($path, 'resources/views/emails/')
-            || str_contains($path, 'resources/views/mail/');
+        return str_contains($path, 'resources/views/emails/') || str_contains($path, 'resources/views/mail/');
     }
 }

@@ -8,7 +8,9 @@
     @endforeach
 
     @if ($admin)
-        <?php $count = \App\Models\Category::count(); ?>
+        <?php
+
+        $count = \App\Models\Category::count(); ?>
         <span>{{ $count }}</span>
     @endif
 </div>

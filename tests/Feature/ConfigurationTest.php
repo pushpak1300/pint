@@ -14,6 +14,23 @@ it('rejects a configuration loaded over plaintext http', function () {
     ]);
 })->throws(ConsoleException::class, 'Loading the configuration over plaintext HTTP is not allowed. Use HTTPS.');
 
+it('rejects legacy top-level rules with migration guidance', function () {
+    $file = testOutputFile();
+    file_put_contents($file, '{"rules":{"array_syntax":{"syntax":"short"}}}');
+
+    run('default', [
+        'path' => base_path('tests/Fixtures/without-issues-laravel'),
+        '--config' => $file,
+    ]);
+})->throws(ConsoleException::class, 'PHP-CS-Fixer [rules] are not supported');
+
+it('rejects the removed empty preset with migration guidance', function () {
+    run('default', [
+        'path' => base_path('tests/Fixtures/without-issues-laravel'),
+        '--preset' => 'empty',
+    ]);
+})->throws(ConsoleException::class, 'preset was removed');
+
 it('uses configured in paths when no path is provided', function () {
     $cwd = getcwd();
 
@@ -27,9 +44,12 @@ it('uses configured in paths when no path is provided', function () {
 
     $output = str_replace('\\/', DIRECTORY_SEPARATOR, $output);
 
-    expect($statusCode)->toBe(1)
-        ->and($output)->toContain(implode(DIRECTORY_SEPARATOR, ['included', 'file.php']))
-        ->and($output)->not->toContain(implode(DIRECTORY_SEPARATOR, ['excluded', 'file.php']));
+    expect($statusCode)
+        ->toBe(1)
+        ->and($output)
+        ->toContain(implode(DIRECTORY_SEPARATOR, ['included', 'file.php']))
+        ->and($output)
+        ->not->toContain(implode(DIRECTORY_SEPARATOR, ['excluded', 'file.php']));
 });
 
 it('uses explicit paths over configured in paths', function () {
@@ -49,7 +69,10 @@ it('uses explicit paths over configured in paths', function () {
 
     $output = str_replace('\\/', DIRECTORY_SEPARATOR, $output);
 
-    expect($statusCode)->toBe(1)
-        ->and($output)->toContain(implode(DIRECTORY_SEPARATOR, ['excluded', 'file.php']))
-        ->and($output)->not->toContain(implode(DIRECTORY_SEPARATOR, ['included', 'file.php']));
+    expect($statusCode)
+        ->toBe(1)
+        ->and($output)
+        ->toContain(implode(DIRECTORY_SEPARATOR, ['excluded', 'file.php']))
+        ->and($output)
+        ->not->toContain(implode(DIRECTORY_SEPARATOR, ['included', 'file.php']));
 });

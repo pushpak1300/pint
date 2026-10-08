@@ -1,21 +1,14 @@
 <?php
 
-it('fixes the code', function () {
-    [$statusCode, $output] = run('default', [
-        'path' => base_path('tests/Fixtures/fixers/yoda_style.php'),
-        '--preset' => 'laravel',
-    ]);
+use Illuminate\Support\Facades\Process;
 
-    expect($statusCode)->toBe(1)
-        ->and($output)
-        ->toContain('  ⨯')
-        ->toContain('@@ -20,6 +20,6 @@')
-        ->toContain(
-            <<<'EOF'
-              -if (null === $int) {
-              +if ($int === null) {
-                   //
-               }
-            EOF,
-        );
+it('preserves comparison operand order outside the selected cleanup rules', function () {
+    $input = file_get_contents(base_path('tests/Fixtures/fixers/yoda_style.php'));
+    $result = Process::input($input)->run('php pint -')->throw();
+
+    expect($result->output())
+        ->toContain('if (null === $int) {')
+        ->toContain('if ($object->count() === $int) {')
+        ->toContain('if (array_values($array) !== $array) {')
+        ->toContain('if ($object->int === $int && (int) $object->int === $int) {');
 });

@@ -2,8 +2,8 @@
 
 namespace App\Output\Concerns;
 
-use PhpCsFixer\Error\Error;
-use PhpCsFixer\Runner\Event\FileProcessed;
+use App\ValueObjects\Error;
+use App\ValueObjects\FileProcessed;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -41,7 +41,7 @@ trait InteractsWithSymbols
         $statusSymbol = $this->statuses[$status];
 
         if (! isset($statusSymbol['symbol'])) {
-            $statusSymbol = ($this->input->getOption('test') || $this->input->getOption('bail'))
+            $statusSymbol = $this->input->getOption('test') || $this->input->getOption('bail')
                 ? $statusSymbol[0]
                 : $statusSymbol[1];
         }

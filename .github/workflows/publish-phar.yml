@@ -37,7 +37,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
-          php-version: 8.3
+          php-version: 8.4
           extensions: dom, curl, libxml, mbstring, zip
           ini-values: error_reporting=E_ALL
           tools: composer:v2
@@ -45,6 +45,9 @@ jobs:
 
       - name: Install the dependencies
         run: composer install --prefer-dist --no-progress
+
+      - name: Stage pinned native Mago binaries and license notices
+        run: python3 scripts/stage-mago.py
 
       - name: Create the PHAR file.
         run: ./pint app:build pint.phar --build-version=${{ steps.tag.outputs.tag }}

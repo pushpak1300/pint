@@ -2,9 +2,11 @@
 
 namespace App;
 
+use App\Contracts\HasPrettierDependencies;
 use App\Contracts\PrettierPostFormatter;
 use App\Contracts\PrettierPreFormatter;
 use App\Exceptions\UnrestorableContentException;
+use App\Fixers\LaravelBlade\Ignorables;
 use App\PrettierFormatters\AlpineMaskPatterns;
 use App\PrettierFormatters\CollapseShortSlots;
 use App\PrettierFormatters\CollapseSingleAttribute;
@@ -18,8 +20,24 @@ use App\PrettierFormatters\PhpBlockFormatting;
 use App\PrettierFormatters\StripSensitiveLeadingBlankLines;
 use App\Support\Prettier;
 
-class BladeFormatter
+class BladeFormatter implements HasPrettierDependencies
 {
+    public const NAME = 'Pint/laravel_blade';
+
+    /**
+     * The packages required to format Blade templates.
+     *
+     * @return array<string, string>
+     */
+    public function prettierDependencies(): array
+    {
+        return [
+            'prettier' => '^3.9.6',
+            'prettier-plugin-blade' => '^3.3.3',
+            'prettier-plugin-tailwindcss' => '^0.8.1',
+        ];
+    }
+
     /**
      * The formatters applied around prettier's Blade output.
      *
@@ -77,26 +95,34 @@ class BladeFormatter
      */
     public function format(string $path, string $content): string
     {
+        foreach ([
+            Ignorables\Envoy::class,
+            Ignorables\BoostGuidelines::class,
+            Ignorables\EmailView::class,
+        ] as $ignorable) {
+            if (app()->call($ignorable, ['path' => $path, 'content' => $content])) {
+                return $content;
+            }
+        }
+
         $formatters = collect(static::$formatters)->map(
             fn (string $formatter): PrettierPreFormatter|PrettierPostFormatter => resolve($formatter),
         );
 
-        $masked = $formatters->reduce(
-            fn (string $content, PrettierPreFormatter|PrettierPostFormatter $formatter): string => $formatter instanceof PrettierPreFormatter
-                ? $formatter->preFormat($content)
-                : $content,
-            $content,
-        );
+        $masked = $formatters->reduce(fn (
+            string $content,
+            PrettierPreFormatter|PrettierPostFormatter $formatter,
+        ): string => $formatter instanceof PrettierPreFormatter ? $formatter->preFormat($content) : $content, $content);
 
         $formatted = $this->prettier->format($path, $masked);
 
         try {
-            return $formatters->reduce(
-                fn (string $formatted, PrettierPreFormatter|PrettierPostFormatter $formatter): string => $formatter instanceof PrettierPostFormatter
-                    ? $formatter->postFormat($formatted)
-                    : $formatted,
-                $formatted,
-            );
+            return $formatters->reduce(fn (
+                string $formatted,
+                PrettierPreFormatter|PrettierPostFormatter $formatter,
+            ): string => $formatter instanceof PrettierPostFormatter
+                ? $formatter->postFormat($formatted)
+                : $formatted, $formatted);
         } catch (UnrestorableContentException) {
             // A pre-formatter could not undo its own work, which means prettier lost or
             // duplicated one of its placeholders. Discard the whole run and hand back the

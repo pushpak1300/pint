@@ -4,94 +4,46 @@ namespace App\Factories;
 
 use App\Project;
 use App\Repositories\ConfigurationJsonRepository;
-use App\Support\Prettier;
-use ArrayIterator;
 use Laravel\AgentDetector\AgentDetector;
-use PhpCsFixer\Config;
-use PhpCsFixer\Console\ConfigurationResolver;
-use PhpCsFixer\ToolInfo;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 
 class ConfigurationResolverFactory
 {
-    /**
-     * The list of available presets.
-     *
-     * @var array<int, string>
-     */
-    public static $presets = [
-        'laravel',
-        'per',
-        'psr12',
-        'symfony',
-        'empty',
-    ];
-
-    /**
-     * Creates a new PHP CS Fixer Configuration Resolver instance
-     * from the given input and output.
-     *
-     * @param  InputInterface  $input
-     * @param  OutputInterface  $output
-     * @return array{ConfigurationResolver, int}
-     */
-    public static function fromIO($input, $output)
+    /** @return list<string> */
+    public static function files(InputInterface $input): array
     {
-        $localConfiguration = resolve(ConfigurationJsonRepository::class);
+        $configuration = resolve(ConfigurationJsonRepository::class);
+        $configuration->preset();
+        $paths = Project::paths($input);
+        $configured = $configuration->hasIncludedPaths() && $paths === [(string) Project::path()];
+        $finder = ConfigurationFactory::finder($configured);
+        $files = [];
 
-        $path = Project::paths($input);
-
-        if ($localConfiguration->hasIncludedPaths() && $path === [(string) Project::path()]) {
-            $path = [];
+        if (! $configured) {
+            $directories = [];
+            foreach ($paths as $path) {
+                if (! file_exists($path)) {
+                    abort(1, "The path [{$path}] does not exist.");
+                }
+                if (is_dir($path)) {
+                    $directories[] = $path;
+                } elseif (! ConfigurationFactory::isPathExcluded($path)) {
+                    $files[] = realpath($path);
+                }
+            }
+            if ($directories === []) {
+                return array_values(array_unique($files));
+            }
+            $finder->in($directories);
         }
 
-        $preset = $localConfiguration->preset();
-
-        if (! in_array($preset, static::$presets)) {
-            abort(1, 'Preset not found.');
+        foreach ($finder as $file) {
+            $files[] = $file->getRealPath();
         }
 
-        $resolver = new ConfigurationResolver(
-            new Config('default'),
-            [
-                'allow-risky' => 'yes',
-                'config' => implode(DIRECTORY_SEPARATOR, [
-                    dirname(__DIR__, 2),
-                    'resources',
-                    'presets',
-                    sprintf('%s.php', $preset),
-                ]),
-                'diff' => $output->isVerbose(),
-                'dry-run' => $input->getOption('test') || $input->getOption('bail'),
-                'path' => $path,
-                'path-mode' => ConfigurationResolver::PATH_MODE_OVERRIDE,
-                'cache-file' => $input->getOption('cache-file') ?? $localConfiguration->cacheFile() ?? implode(DIRECTORY_SEPARATOR, [
-                    realpath(sys_get_temp_dir()),
-                    md5(
-                        app()->isProduction()
-                        ? (implode('|', $path).'||'.(string) Prettier::VERSION)
-                        : (string) microtime()
-                    ),
-                ]),
-                'stop-on-violation' => $input->getOption('bail'),
-                'verbosity' => $output->getVerbosity(),
-                'show-progress' => 'true',
-            ],
-            Project::path(),
-            new ToolInfo,
-        );
-
-        $totalFiles = count(new ArrayIterator(iterator_to_array(
-            $resolver->getFinder(),
-        )));
-
-        return [$resolver, $totalFiles];
+        return array_values(array_unique($files));
     }
 
-    /**
-     * Determine if Pint is being run by an AI agent.
-     */
     public static function runningInAgent(): bool
     {
         return AgentDetector::detect()->isAgent;

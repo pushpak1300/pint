@@ -62,10 +62,14 @@ it('does not let a ">" inside an opening-tag attribute value end the tag early',
 
     // The whole opening tag (including the ">" inside data-cmp) must be carried
     // through untouched, and only the Blade in the body masked.
-    expect($out)->toStartWith('<script type="text/x-template" data-cmp="a>b">')
-        ->and($out)->toEndWith('</script>')
-        ->and($map)->toHaveCount(1)
-        ->and(array_values($map)[0])->toBe('@if ($ok) 1 @else 2 @endif');
+    expect($out)
+        ->toStartWith('<script type="text/x-template" data-cmp="a>b">')
+        ->and($out)
+        ->toEndWith('</script>')
+        ->and($map)
+        ->toHaveCount(1)
+        ->and(array_values($map)[0])
+        ->toBe('@if ($ok) 1 @else 2 @endif');
 });
 
 it('leaves Blade in normal HTML untouched', function () {
@@ -208,7 +212,7 @@ it('re-salts the token index when the source already contains a placeholder-like
 
     expect(array_keys($map)[0])->toBe('__PINT_BLADE_1__');
     expect($out)->toContain('__PINT_BLADE_0__</p>'); // the source literal is untouched
-    expect($masker->postFormat($out))->toBe($in);    // and the round-trip is exact
+    expect($masker->postFormat($out))->toBe($in); // and the round-trip is exact
 });
 
 it('masks an escaped "@@" inside a string literal', function () {

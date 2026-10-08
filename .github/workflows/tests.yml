@@ -19,8 +19,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-22.04, windows-2022]
-        php: [8.3, 8.4, 8.5]
+        os: [ubuntu-22.04, windows-2022, macos-15]
+        php: [8.4, 8.5]
+        include:
+          - os: ubuntu-24.04-arm
+            php: 8.4
+          - os: macos-15-intel
+            php: 8.4
 
     name: PHP ${{ matrix.php }} - ${{ matrix.os }}
 
@@ -64,6 +69,9 @@ jobs:
           composer install
           npm install
 
+      - name: Stage pinned native Mago binaries
+        run: python scripts/stage-mago.py
+
       - name: Execute lint tests with Laravel preset
         run: ./pint --test
 
@@ -79,3 +87,10 @@ jobs:
 
       - name: Execute unit/feature tests
         run: vendor/bin/pest
+
+      - name: Build and smoke test the bundled PHAR
+        if: matrix.php == '8.4'
+        run: |
+          php pint app:build pint --build-version=2.0.0-dev --no-interaction
+          php builds/pint --version
+          php builds/pint --no-config --test tests/Fixtures/without-issues-laravel

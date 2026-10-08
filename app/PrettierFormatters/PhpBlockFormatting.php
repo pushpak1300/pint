@@ -4,8 +4,10 @@ namespace App\PrettierFormatters;
 
 use App\Contracts\PrettierPostFormatter;
 use App\Support\PhpFragmentFormatter;
+use CompileError;
 use Illuminate\Support\Str;
-use PhpCsFixer\Tokenizer\Tokens;
+use ParseError;
+use PhpToken;
 
 class PhpBlockFormatting implements PrettierPostFormatter
 {
@@ -26,8 +28,21 @@ class PhpBlockFormatting implements PrettierPostFormatter
      * @var array<int, string>
      */
     private const SKIP_DIRECTIVES = [
-        'php', 'media', 'supports', 'scope', 'keyframes', 'font', 'import', 'charset',
-        'namespace', 'page', 'container', 'layer', 'property', 'apply', 'tailwind',
+        'php',
+        'media',
+        'supports',
+        'scope',
+        'keyframes',
+        'font',
+        'import',
+        'charset',
+        'namespace',
+        'page',
+        'container',
+        'layer',
+        'property',
+        'apply',
+        'tailwind',
     ];
 
     public function __construct(
@@ -196,19 +211,21 @@ class PhpBlockFormatting implements PrettierPostFormatter
             return $formatted;
         }
 
-        $tokens->clearAt($comma);
+        $tokens[$comma]->text = '';
 
-        return $this->stripPhpWrapper($tokens->generateCode());
+        return $this->stripPhpWrapper(implode('', array_map(fn (PhpToken $token): string => $token->text, $tokens)));
     }
 
     /**
      * Tokenize a synthetic host, or null when it is not PHP on its own.
+     *
+     * @return array<int, PhpToken>|null
      */
-    private function hostTokens(string $host): ?Tokens
+    private function hostTokens(string $host): ?array
     {
         try {
-            return Tokens::fromCode("<?php\n".$host);
-        } catch (\CompileError|\ParseError) {
+            return PhpToken::tokenize("<?php\n".$host, TOKEN_PARSE);
+        } catch (CompileError|ParseError) {
             return null;
         }
     }
@@ -218,19 +235,31 @@ class PhpBlockFormatting implements PrettierPostFormatter
      *
      * A comment is free to trail the comma, so the ")" is found first and the
      * tokens are walked back from there rather than matched at the very end.
+     *
+     * @param  array<int, PhpToken>  $tokens
      */
-    private function hostTrailingComma(Tokens $tokens): ?int
+    private function hostTrailingComma(array $tokens): ?int
     {
-        $semicolon = $tokens->getPrevMeaningfulToken($tokens->count());
-        $close = $semicolon === null ? null : $tokens->getPrevMeaningfulToken($semicolon);
+        $meaningful = [];
 
-        if ($close === null || ! $tokens[$close]->equals(')')) {
-            return null;
+        foreach ($tokens as $index => $token) {
+            if (! $token->isIgnorable()) {
+                $meaningful[] = $index;
+            }
         }
 
-        $comma = $tokens->getPrevMeaningfulToken($close);
+        $semicolon = array_pop($meaningful);
+        $close = array_pop($meaningful);
+        $comma = array_pop($meaningful);
 
-        return $comma !== null && $tokens[$comma]->equals(',') ? $comma : null;
+        return $semicolon !== null
+        && $tokens[$semicolon]->is(';')
+        && $close !== null
+        && $tokens[$close]->is(')')
+        && $comma !== null
+        && $tokens[$comma]->is(',')
+            ? $comma
+            : null;
     }
 
     /**
@@ -244,9 +273,9 @@ class PhpBlockFormatting implements PrettierPostFormatter
         // indented even when empty; a blank line inside the argument is not.
         $last = $lines->count() - 1;
 
-        return $lines
-            ->map(fn (string $line, int $index): string => $index === 0 || ($line === '' && $index !== $last) ? $line : $indent.$line)
-            ->implode("\n");
+        return $lines->map(fn (string $line, int $index): string => $index === 0 || $line === '' && $index !== $last
+            ? $line
+            : $indent.$line)->implode("\n");
     }
 
     /**
@@ -260,10 +289,10 @@ class PhpBlockFormatting implements PrettierPostFormatter
 
         $width = strlen($indent);
 
-        return Str::of($inner)
-            ->explode("\n")
-            ->map(fn (string $line, int $index): string => $index === 0 || ! str_starts_with($line, $indent) ? $line : substr($line, $width))
-            ->implode("\n");
+        return Str::of($inner)->explode("\n")->map(fn (string $line, int $index): string => $index === 0
+            || ! str_starts_with($line, $indent)
+                ? $line
+                : substr($line, $width))->implode("\n");
     }
 
     /**
@@ -363,7 +392,12 @@ class PhpBlockFormatting implements PrettierPostFormatter
             ->merge($verbatim)
             ->all();
 
-        if (! preg_match_all('/(?<![\w:-])(:[\w.:-]+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\')/', $content, $matches, PREG_OFFSET_CAPTURE)) {
+        if (! preg_match_all(
+            '/(?<![\w:-])(:[\w.:-]+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\')/',
+            $content,
+            $matches,
+            PREG_OFFSET_CAPTURE,
+        )) {
             return [];
         }
 
@@ -402,9 +436,10 @@ class PhpBlockFormatting implements PrettierPostFormatter
             return [];
         }
 
-        return collect($matches[0])
-            ->map(fn (array $match): array => [$match[1], $this->tagEnd($content, $match[1] + strlen($match[0]))])
-            ->all();
+        return collect($matches[0])->map(fn (array $match): array => [
+            $match[1],
+            $this->tagEnd($content, $match[1] + strlen($match[0])),
+        ])->all();
     }
 
     /**
@@ -445,7 +480,10 @@ class PhpBlockFormatting implements PrettierPostFormatter
             return null;
         }
 
-        $formatted = $this->stripPhpWrapper($this->formatter->format("<?php\n__pint__(".$expr.");\n", fragment: true));
+        $formatted = $this->stripPhpWrapper($this->formatter->format(
+            "<?php\n__pint__(".$expr.");\n",
+            fragment: true,
+        ));
 
         $open = strpos($formatted, '(');
 
@@ -469,9 +507,7 @@ class PhpBlockFormatting implements PrettierPostFormatter
             return [];
         }
 
-        return collect($matches[0])
-            ->map(fn (array $match): array => [$match[1], $match[1] + strlen($match[0])])
-            ->all();
+        return collect($matches[0])->map(fn (array $match): array => [$match[1], $match[1] + strlen($match[0])])->all();
     }
 
     /**
@@ -485,9 +521,7 @@ class PhpBlockFormatting implements PrettierPostFormatter
             return [];
         }
 
-        return collect($matches[0])
-            ->map(fn (array $match): array => [$match[1], $match[1] + strlen($match[0])])
-            ->all();
+        return collect($matches[0])->map(fn (array $match): array => [$match[1], $match[1] + strlen($match[0])])->all();
     }
 
     /**
@@ -615,10 +649,10 @@ class PhpBlockFormatting implements PrettierPostFormatter
             return $formatted;
         }
 
-        return Str::of($formatted)
-            ->explode("\n")
-            ->map(fn (string $line, int $index): string => $index === 0 || $line === '' ? $line : $indent.$line)
-            ->implode("\n");
+        return Str::of($formatted)->explode("\n")->map(fn (string $line, int $index): string => $index === 0
+            || $line === ''
+                ? $line
+                : $indent.$line)->implode("\n");
     }
 
     /**
@@ -634,10 +668,7 @@ class PhpBlockFormatting implements PrettierPostFormatter
      */
     private function deindent(string $text): string
     {
-        return Str::of($text)
-            ->explode("\n")
-            ->map(fn (string $line): string => ltrim($line, " \t"))
-            ->implode("\n");
+        return Str::of($text)->explode("\n")->map(fn (string $line): string => ltrim($line, " \t"))->implode("\n");
     }
 
     /**
@@ -656,9 +687,9 @@ class PhpBlockFormatting implements PrettierPostFormatter
             return $text;
         }
 
-        return $lines
-            ->map(fn (string $line): string => trim($line) === '' ? $line : substr($line, $shortestIndent))
-            ->implode("\n");
+        return $lines->map(fn (string $line): string => trim($line) === ''
+            ? $line
+            : substr($line, $shortestIndent))->implode("\n");
     }
 
     /**
@@ -666,9 +697,8 @@ class PhpBlockFormatting implements PrettierPostFormatter
      */
     private function reindent(string $text, string $prefix): string
     {
-        return Str::of($text)
-            ->explode("\n")
-            ->map(fn (string $line): string => $line === '' ? $line : $prefix.$line)
-            ->implode("\n");
+        return Str::of($text)->explode("\n")->map(fn (string $line): string => $line === ''
+            ? $line
+            : $prefix.$line)->implode("\n");
     }
 }

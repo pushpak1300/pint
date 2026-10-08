@@ -53,10 +53,33 @@ class GitPathsRepository implements PathsRepository
     public function diff($branch)
     {
         $files = [
-            'committed' => tap(new Process(['git', 'diff', '--name-only', '--diff-filter=AMR', "{$branch}...HEAD", '--', '**.php']))->run(),
-            'staged' => tap(new Process(['git', 'diff', '--name-only', '--diff-filter=AMR', '--cached', '--', '**.php']))->run(),
+            'committed' => tap(new Process([
+                'git',
+                'diff',
+                '--name-only',
+                '--diff-filter=AMR',
+                "{$branch}...HEAD",
+                '--',
+                '**.php',
+            ]))->run(),
+            'staged' => tap(new Process([
+                'git',
+                'diff',
+                '--name-only',
+                '--diff-filter=AMR',
+                '--cached',
+                '--',
+                '**.php',
+            ]))->run(),
             'unstaged' => tap(new Process(['git', 'diff', '--name-only', '--diff-filter=AMR', '--', '**.php']))->run(),
-            'untracked' => tap(new Process(['git', 'ls-files', '--others', '--exclude-standard', '--', '**.php']))->run(),
+            'untracked' => tap(new Process([
+                'git',
+                'ls-files',
+                '--others',
+                '--exclude-standard',
+                '--',
+                '**.php',
+            ]))->run(),
         ];
 
         /** @var Collection<int, string> $files */
@@ -83,22 +106,17 @@ class GitPathsRepository implements PathsRepository
      */
     protected function processFileNames(Collection $fileNames)
     {
-        $processedFileNames = $fileNames
-            ->map(function ($file) {
-                if (PHP_OS_FAMILY === 'Windows') {
-                    $file = str_replace('/', DIRECTORY_SEPARATOR, $file);
-                }
+        $processedFileNames = $fileNames->map(function ($file) {
+            if (PHP_OS_FAMILY === 'Windows') {
+                $file = str_replace('/', DIRECTORY_SEPARATOR, $file);
+            }
 
-                return $this->path.DIRECTORY_SEPARATOR.$file;
-            })
-            ->all();
+            return $this->path.DIRECTORY_SEPARATOR.$file;
+        })->all();
 
         $files = array_values(array_map(function ($splFile) {
             return $splFile->getPathname();
-        }, iterator_to_array(ConfigurationFactory::finder()
-            ->in($this->path)
-            ->files()
-        )));
+        }, iterator_to_array(ConfigurationFactory::finder()->in($this->path)->files())));
 
         return array_values(array_intersect($files, $processedFileNames));
     }

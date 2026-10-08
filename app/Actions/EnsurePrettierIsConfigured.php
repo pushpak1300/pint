@@ -2,16 +2,14 @@
 
 namespace App\Actions;
 
+use App\BladeFormatter;
 use App\Contracts\HasPrettierDependencies;
 use App\Enums\NodePackageManager;
-use App\Factories\ConfigurationFactory;
 use App\Repositories\ConfigurationJsonRepository;
 use App\Support\Prettier;
 use Composer\Semver\Semver;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
-use PhpCsFixer\Fixer\FixerInterface;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\progress;
@@ -53,8 +51,7 @@ class EnsurePrettierIsConfigured
 
         $this->ensureSupportedDistribution();
 
-        $this->ensureRuntimeIsInstalled()
-            ->ensureNodeDependenciesAreInstalled();
+        $this->ensureRuntimeIsInstalled()->ensureNodeDependenciesAreInstalled();
     }
 
     /**
@@ -62,22 +59,7 @@ class EnsurePrettierIsConfigured
      */
     protected function needsPrettier(): bool
     {
-        return $this->enabledPrettierFixers()->isNotEmpty();
-    }
-
-    /**
-     * The enabled rules that depend on prettier.
-     *
-     * @return Collection<int, HasPrettierDependencies&FixerInterface>
-     */
-    protected function enabledPrettierFixers(): Collection
-    {
-        $rules = $this->configuration->rules();
-
-        return collect(ConfigurationFactory::customFixers())
-            ->filter(fn ($fixer) => $fixer instanceof HasPrettierDependencies)
-            ->filter(fn ($fixer) => ($rules[$fixer->getName()] ?? false) === true)
-            ->values();
+        return $this->configuration->blade();
     }
 
     /**
@@ -89,12 +71,7 @@ class EnsurePrettierIsConfigured
             return;
         }
 
-        abort(1, sprintf(
-            'The [%s] rule is not available in this Pint distribution.',
-            $this->enabledPrettierFixers()
-                ->map(fn ($fixer) => $fixer->getName())
-                ->implode(', '),
-        ));
+        abort(1, sprintf('The [%s] rule is not available in this Pint distribution.', BladeFormatter::NAME));
     }
 
     /**
@@ -105,10 +82,7 @@ class EnsurePrettierIsConfigured
      */
     public function requiredPackages(): array
     {
-        return collect(ConfigurationFactory::customFixers())
-            ->filter(fn ($fixer) => $fixer instanceof HasPrettierDependencies)
-            ->flatMap(fn (HasPrettierDependencies $fixer) => $fixer->prettierDependencies())
-            ->all();
+        return resolve(BladeFormatter::class)->prettierDependencies();
     }
 
     /**
@@ -117,7 +91,10 @@ class EnsurePrettierIsConfigured
     protected function ensureRuntimeIsInstalled(): static
     {
         if (Process::run([$this->prettier->runtimeBinary(), '-v'])->failed()) {
-            abort(1, 'The rules enabled in your pint configuration require a JavaScript runtime (Node.js or Bun) to be installed.');
+            abort(
+                1,
+                'The rules enabled in your pint configuration require a JavaScript runtime (Node.js or Bun) to be installed.',
+            );
         }
 
         return $this;
@@ -135,9 +112,9 @@ class EnsurePrettierIsConfigured
 
         $manager = NodePackageManager::detect($projectRoot);
 
-        $probes = collect($required)
-            ->map(fn (string $constraint, string $package): array => $this->probe($package))
-            ->all();
+        $probes = collect($required)->map(
+            fn (string $constraint, string $package): array => $this->probe($package),
+        )->all();
 
         $missing = collect($probes)
             ->reject(fn (array $probe): bool => $probe['resolved'])
@@ -158,26 +135,28 @@ class EnsurePrettierIsConfigured
         if ($outdated !== []) {
             abort(1, sprintf(
                 "The following prettier dependencies do not satisfy the versions required by your pint configuration:\n%s\n\nUpdate them using [%s]: %s",
-                collect($outdated)
-                    ->map(fn (array $dependency): string => sprintf(
-                        '  - %s (installed: %s, required: %s)',
-                        $dependency['package'],
-                        $dependency['installed'],
-                        $dependency['constraint'],
-                    ))
-                    ->implode("\n"),
+                collect($outdated)->map(fn (array $dependency): string => sprintf(
+                    '  - %s (installed: %s, required: %s)',
+                    $dependency['package'],
+                    $dependency['installed'],
+                    $dependency['constraint'],
+                ))->implode("\n"),
                 $manager->binary(),
-                implode(' ', $manager->installCommand(collect($outdated)->map(
-                    fn (array $dependency): string => $this->spec($dependency['package'], $dependency['constraint']),
-                )->all())),
+                implode(
+                    ' ',
+                    $manager->installCommand(
+                        collect($outdated)->map(fn (array $dependency): string => $this->spec(
+                            $dependency['package'],
+                            $dependency['constraint'],
+                        ))->all(),
+                    ),
+                ),
             ));
         }
 
-        $this->cacheFingerprints = $this->enabledPrettierFixers()
-            ->mapWithKeys(fn (HasPrettierDependencies&FixerInterface $fixer): array => [
-                $fixer->getName() => $this->fingerprint($fixer, $probes),
-            ])
-            ->all();
+        $this->cacheFingerprints = [
+            BladeFormatter::NAME => $this->fingerprint(resolve(BladeFormatter::class), $probes),
+        ];
 
         return $this;
     }
@@ -206,24 +185,25 @@ class EnsurePrettierIsConfigured
      * @param  array<int, string>  $missing
      * @param  array<string, string>  $required
      */
-    protected function installMissing(array $missing, array $required, NodePackageManager $manager, string $projectRoot): void
-    {
+    protected function installMissing(
+        array $missing,
+        array $required,
+        NodePackageManager $manager,
+        string $projectRoot,
+    ): void {
         warning(sprintf(
             'The rules enabled in your pint configuration require the following prettier dependencies to be installed using [%s]: %s.',
             $manager->binary(),
             implode(', ', $missing),
         ));
 
-        $confirmed = confirm(
-            label: 'Would you like to install them now?',
-            default: false,
-        );
+        $confirmed = confirm(label: 'Would you like to install them now?', default: false);
 
         if (! $confirmed) {
-            abort(1, sprintf(
-                'The rules enabled in your pint configuration require the following prettier dependencies to be installed: %s.',
-                implode(', ', $missing),
-            ));
+            abort(1, sprintf('The rules enabled in your pint configuration require the following prettier dependencies to be installed: %s.', implode(
+                ', ',
+                $missing,
+            )));
         }
 
         $this->ensurePackageJsonExists();
@@ -234,9 +214,10 @@ class EnsurePrettierIsConfigured
             callback: function (string $package, $progress) use ($manager, $projectRoot, $required): void {
                 $progress->hint(sprintf('Installing [%s]...', $package));
 
-                $result = Process::path($projectRoot)->run(
-                    $manager->installCommand([$this->spec($package, $required[$package])]),
-                );
+                $result = Process::path($projectRoot)->run($manager->installCommand([$this->spec(
+                    $package,
+                    $required[$package],
+                )]));
 
                 if ($result->failed()) {
                     abort(1, sprintf(
@@ -260,7 +241,10 @@ class EnsurePrettierIsConfigured
     {
         return collect($probes)
             ->filter(fn (array $probe): bool => $probe['resolved'] && $probe['version'] !== null)
-            ->reject(fn (array $probe, string $package): bool => Semver::satisfies($probe['version'], $required[$package]))
+            ->reject(fn (array $probe, string $package): bool => Semver::satisfies(
+                $probe['version'],
+                $required[$package],
+            ))
             ->map(fn (array $probe, string $package): array => [
                 'package' => $package,
                 'installed' => $probe['version'],
@@ -277,8 +261,11 @@ class EnsurePrettierIsConfigured
      */
     protected function probe(string $package): array
     {
-        $result = Process::path($this->prettier->projectRoot())
-            ->run([$this->prettier->runtimeBinary(), $this->prettier->versionProbePath(), $package]);
+        $result = Process::path($this->prettier->projectRoot())->run([
+            $this->prettier->runtimeBinary(),
+            $this->prettier->versionProbePath(),
+            $package,
+        ]);
 
         if ($result->failed()) {
             return ['resolved' => false, 'version' => null];
@@ -309,7 +296,8 @@ class EnsurePrettierIsConfigured
                 '$schema' => 'https://www.schemastore.org/package.json',
                 'private' => true,
                 'type' => 'module',
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL);
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+                .PHP_EOL);
         }
     }
 }

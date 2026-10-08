@@ -3,11 +3,18 @@
     "directories": [
         "app",
         "bootstrap",
-        "config",
-        "overrides",
-        "resources"
+        "config"
+    ],
+    "directories-bin": [
+        "resources/mago"
     ],
     "finder": [
+        {
+            "in": "resources",
+            "notPath": [
+                "#^mago/#"
+            ]
+        },
         {
             "in": "vendor",
             "notPath": [
@@ -89,6 +96,7 @@
         "vendor/pestphp/pest/src/Plugin.php"
     ],
     "blacklist": [
+        "resources/mago/.gitignore",
         "resources/js/worker.cjs",
         "resources/js/version-probe.cjs",
         "resources/prettier/prettierrc.json",

@@ -16,11 +16,9 @@ it('determines diff files', function () {
 
     $this->swap(PathsRepository::class, $paths);
 
-    [$statusCode, $output] = run('default', ['--diff' => 'main']);
+    [$statusCode, $output] = run('default', ['--diff' => 'main', '--no-config' => true]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── Laravel', ' 1 file');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── Laravel', ' 1 file');
 });
 
 it('ignores the path argument', function () {
@@ -37,12 +35,11 @@ it('ignores the path argument', function () {
 
     [$statusCode, $output] = run('default', [
         '--diff' => 'main',
+        '--no-config' => true,
         'path' => base_path(),
     ]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── Laravel', ' 1 file');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── Laravel', ' 1 file');
 });
 
 it('fails when git is not available', function () {
@@ -62,10 +59,7 @@ it('fails when git is not available', function () {
 it('does not abort when there are no diff files', function () {
     $paths = Mockery::mock(PathsRepository::class);
 
-    $paths
-        ->shouldReceive('diff')
-        ->once()
-        ->andReturn([]);
+    $paths->shouldReceive('diff')->once()->andReturn([]);
 
     $this->swap(PathsRepository::class, $paths);
 
@@ -73,9 +67,7 @@ it('does not abort when there are no diff files', function () {
         '--diff' => 'main',
     ]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── Laravel', ' 0 files');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── Laravel', ' 0 files');
 });
 
 it('parses nested branch names', function () {
@@ -93,9 +85,8 @@ it('parses nested branch names', function () {
 
     [$statusCode, $output] = run('default', [
         '--diff' => 'origin/main',
+        '--no-config' => true,
     ]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── Laravel', ' 1 file');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── Laravel', ' 1 file');
 });

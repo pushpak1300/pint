@@ -1,116 +1,145 @@
 <?php
 
 use App\Repositories\ConfigurationJsonRepository;
+use App\Support\Mago;
 use App\Support\PhpFragmentFormatter;
 use Tests\TestCase;
 
-/*
-| The formatter reads the active preset off the configuration repository, which
-| is normally built from the command's input. There is no command here, so the
-| repository is bound by hand to the preset Pint defaults to.
-*/
+// The formatter's Mago service uses the active project configuration.
 uses(TestCase::class)->beforeEach(function () {
-    app()->singleton(
-        ConfigurationJsonRepository::class,
-        fn () => new ConfigurationJsonRepository(null, 'laravel'),
-    );
+    app()->singleton(ConfigurationJsonRepository::class, fn () => new ConfigurationJsonRepository(null, 'laravel'));
 });
 
 it('keeps the imports of a "<?php ... ?>" island it formats', function () {
     // The island is formatted on its own, so the markup that uses "CalculationMode"
     // is as far out of sight here as it is for the run over the whole file.
     $in = <<<'PHP'
-    <?php
+        <?php
 
-    use App\Enums\CalculationMode;
-    use App\Models\User;
+        use App\Enums\CalculationMode;
+        use App\Models\User;
 
-    $default = "all";
-    ?>
+        $default = "all";
+        ?>
 
-    PHP;
+        PHP;
 
-    $out = (new PhpFragmentFormatter)->format($in);
+    $out = new PhpFragmentFormatter()->format($in);
 
-    expect($out)->toContain('use App\Enums\CalculationMode;')
+    expect($out)
+        ->toContain('use App\Enums\CalculationMode;')
         ->toContain('use App\Models\User;')
+        ->toContain('?>')
         // The rest of the preset still runs over the island.
         ->toContain("\$default = 'all';");
 });
 
 it('keeps the imports of a fragment it formats', function () {
     $in = <<<'PHP'
-    <?php
-    use App\Models\User;
-    $default = "all";
+        <?php
+        use App\Models\User;
+        $default = "all";
 
-    PHP;
+        PHP;
 
-    $out = (new PhpFragmentFormatter)->format($in, fragment: true);
+    $out = new PhpFragmentFormatter()->format($in, fragment: true);
 
-    expect($out)->toContain('use App\Models\User;')
-        ->toContain("\$default = 'all';");
+    expect($out)->toContain('use App\Models\User;')->toContain("\$default = 'all';");
 });
 
 it('keeps the imports of a single file component it formats', function () {
     $in = <<<'PHP'
-    <?php
+        <?php
 
-    use App\Models\User;
-    use Illuminate\View\Component;
+        use App\Models\User;
+        use Illuminate\View\Component;
 
-    new class extends Component
-    {
-        public string $mode = "all";
-    };
-    ?>
+        new class extends Component
+        {
+            public string $mode = "all";
+        };
+        ?>
 
-    PHP;
+        PHP;
 
-    $out = (new PhpFragmentFormatter)->format($in);
+    $out = new PhpFragmentFormatter()->format($in);
 
-    expect($out)->toContain('use App\Models\User;')
+    expect($out)
+        ->toContain('use App\Models\User;')
         ->toContain('use Illuminate\View\Component;')
+        ->toContain('?>')
         ->toContain("public string \$mode = 'all';");
 });
 
 it('returns unparseable code unchanged instead of throwing', function () {
     $in = <<<'PHP'
-    <?php
-    $x = 1;
-    @extends('layouts.app')
-    PHP;
+        <?php
+        $x = 1;
+        @extends('layouts.app')
+        PHP;
 
-    $out = (new PhpFragmentFormatter)->format($in);
+    $out = new PhpFragmentFormatter()->format($in);
 
     expect($out)->toBe($in);
 });
 
 it('returns unparseable fragment unchanged instead of throwing', function () {
     $in = <<<'PHP'
-    <?php
-    $x = [
-    PHP;
+        <?php
+        $x = [
+        PHP;
 
-    $out = (new PhpFragmentFormatter)->format($in, fragment: true);
+    $out = new PhpFragmentFormatter()->format($in, fragment: true);
 
     expect($out)->toBe($in);
 });
 
 it('formats an island the same way twice', function () {
     $in = <<<'PHP'
-    <?php
+        <?php
 
-    use App\Enums\CalculationMode;
+        use App\Enums\CalculationMode;
 
-    $default = "all";
-    ?>
+        $default = "all";
+        ?>
 
-    PHP;
+        PHP;
 
     $formatter = new PhpFragmentFormatter;
 
     $once = $formatter->format($in);
 
     expect($formatter->format($once))->toBe($once);
+});
+
+it('delegates both formatting modes to Mago fragments', function (bool $fragment) {
+    $mago = new class {
+        public array $calls = [];
+
+        public function formatFragment(string $code): string
+        {
+            $this->calls[] = $code;
+
+            return 'formatted';
+        }
+    };
+
+    app()->instance(Mago::class, $mago);
+
+    expect(new PhpFragmentFormatter()->format('original', $fragment))
+        ->toBe('formatted')
+        ->and($mago->calls)
+        ->toBe(['original']);
+})->with([false, true]);
+
+it('does not swallow real formatter failures', function () {
+    app()->instance(Mago::class, new class {
+        public function formatFragment(string $code): string
+        {
+            throw new RuntimeException('Mago failed');
+        }
+    });
+
+    expect(fn () => new PhpFragmentFormatter()->format('<?php $x = 1;', fragment: true))
+        ->toThrow(RuntimeException::class, 'Mago failed');
 });

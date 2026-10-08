@@ -19,7 +19,7 @@ class JoinDanglingOpenBracket implements PrettierPostFormatter
             $line = $lines[$index];
             $isBareTag = preg_match('/^<([A-Za-z][A-Za-z0-9:_.\-]*)$/', trim($line), $matches) === 1;
 
-            if ($isBareTag && $index + 1 < $lineCount) {
+            if ($isBareTag && ($index + 1) < $lineCount) {
                 $tag = $matches[1];
                 $nextLine = ltrim($lines[$index + 1]);
 

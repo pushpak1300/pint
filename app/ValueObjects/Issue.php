@@ -14,13 +14,13 @@ class Issue
      * @param  string  $path
      * @param  string  $file
      * @param  string  $symbol
-     * @param  array<string, list<string>|string|\Throwable>  $payload
+     * @param  array<string, list<string>|string|int|\Throwable|null>  $payload
      */
     public function __construct(
         protected $path,
         protected $file,
         protected $symbol,
-        protected $payload
+        protected $payload,
     ) {
         // ..
     }
@@ -47,9 +47,11 @@ class Issue
             return $this->payload['source']->getMessage();
         }
 
-        return collect($this->payload['appliedFixers'])->map(function ($appliedFixer) {
-            return $appliedFixer;
-        })->implode(', ');
+        return collect($this->payload['appliedFixers'])
+            ->map(function ($appliedFixer) {
+                return $appliedFixer;
+            })
+            ->implode(', ');
     }
 
     /**
@@ -74,7 +76,7 @@ class Issue
 
             $exception = $this->payload['source']->getPrevious() ?: $this->payload['source'];
 
-            return (new Highlighter)->highlight($content, $exception->getLine());
+            return new Highlighter()->highlight($content, $this->payload['line'] ?? $exception->getLine());
         }
 
         return $this->diff();
@@ -113,7 +115,8 @@ class Issue
                     }
 
                     return $line;
-                })->implode("\n");
+                })
+                ->implode("\n");
 
             $method = tap($reflector->getMethod('getHighlightedLines'))->setAccessible(true);
             $tokenLines = $method->invoke($highlighter, "<?php\n".$diff);
@@ -125,23 +128,19 @@ class Issue
             $lines = $method->invoke($highlighter, $tokenLines);
             $lines = collect($lines)->map(function ($line) {
                 if (str($line)->startsWith('[90;3m//-')) {
-                    return str($line)
-                        ->replaceFirst('[90;3m//-', '');
+                    return str($line)->replaceFirst('[90;3m//-', '');
                 }
 
                 if (str($line)->startsWith('//-')) {
-                    return str($line)
-                        ->replaceFirst('//-', '');
+                    return str($line)->replaceFirst('//-', '');
                 }
 
                 if (str($line)->startsWith('[90;3m//+')) {
-                    return str($line)
-                        ->replaceFirst('[90;3m//+', '');
+                    return str($line)->replaceFirst('[90;3m//+', '');
                 }
 
                 if (str($line)->startsWith('//+')) {
-                    return str($line)
-                        ->replaceFirst('//+', '');
+                    return str($line)->replaceFirst('//+', '');
                 }
 
                 return $line;

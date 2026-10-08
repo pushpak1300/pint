@@ -1,6 +1,3 @@
 {
-    "preset": "laravel",
-    "rules": {
-        "psr_autoloading": true
-    }
+    "preset": "laravel"
 }

@@ -24,12 +24,12 @@
     <?php } ?>
 
     {{-- if / endif, alternative-syntax form split across islands --}}
-    <?php if ($admin) { ?>
-    <span>Admin</span>
-    <?php } ?>
+    <?php if ($admin): ?>
+        <span>Admin</span>
+    <?php endif; ?>
 
     {{-- foreach / endforeach, alternative-syntax form split across islands --}}
-    <?php foreach ($users as $user) { ?>
-    <li>{{ $user->name }}</li>
-    <?php } ?>
+    <?php foreach ($users as $user): ?>
+        <li>{{ $user->name }}</li>
+    <?php endforeach; ?>
 </div>

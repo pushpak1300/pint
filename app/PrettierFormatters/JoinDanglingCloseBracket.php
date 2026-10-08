@@ -19,7 +19,8 @@ class JoinDanglingCloseBracket implements PrettierPostFormatter
             $line = $lines[$index];
             $nextLine = $lines[$index + 1] ?? null;
 
-            $danglesCloseBracket = $nextLine !== null
+            $danglesCloseBracket =
+                $nextLine !== null
                 && trim($nextLine) === '>'
                 && preg_match('/<\/[A-Za-z][A-Za-z0-9:_.\-]*$/', rtrim($line)) === 1;
 

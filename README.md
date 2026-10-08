@@ -14,7 +14,9 @@
 <a name="introduction"></a>
 ## Introduction
 
-**Laravel Pint** is an opinionated PHP code style fixer for minimalists. Pint is built on top of **[PHP-CS-Fixer](https://github.com/FriendsOfPHP/PHP-CS-Fixer)** and makes it simple to ensure that your code style stays **clean** and **consistent**.
+**Laravel Pint** is an opinionated PHP code style fixer for minimalists. Pint 2.x uses **[Mago](https://mago.carthage.software/1.53.0/en/tools/formatter/overview/)** for PHP formatting and selected code cleanup.
+
+This branch is the Pint 2.x migration. See [UPGRADE.md](UPGRADE.md) for configuration changes and known differences. Source contributors must run `composer install`, `npm ci` (for Blade), and `python3 scripts/stage-mago.py` before running tests or building the bundled PHAR. Released builds include Mago; users do not install or download it separately.
 
 ## Official Documentation
 

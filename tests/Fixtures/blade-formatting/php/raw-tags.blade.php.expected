@@ -1,5 +1,7 @@
 <div>
-    <?php $greeting = 'Hello'; ?>
+    <?php
+
+    $greeting = 'Hello'; ?>
     <p>{{ $greeting }}</p>
 
     @php

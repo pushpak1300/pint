@@ -9,10 +9,11 @@ use App\Support\Prettier;
  */
 function fakePrettier(Closure $handler): Prettier
 {
-    return new class('', $handler) extends Prettier
-    {
-        public function __construct(string $projectRoot, private Closure $handler)
-        {
+    return new class('', $handler) extends Prettier {
+        public function __construct(
+            string $projectRoot,
+            private Closure $handler,
+        ) {
             parent::__construct($projectRoot);
         }
 
@@ -46,9 +47,11 @@ it('hands back the untouched file when a placeholder cannot be restored', functi
     // Prettier loses the mask placeholder. Every masking pass has to be given up on at that
     // point: the intermediate content still holds the other pass' placeholders, so only the
     // original file is guaranteed to be intact.
-    $formatter = new BladeFormatter(fakePrettier(
-        fn (string $content): string => (string) preg_replace('/pm\d+_*/', 'gone', $content),
-    ));
+    $formatter = new BladeFormatter(fakePrettier(fn (string $content): string => (string) preg_replace(
+        '/pm\d+_*/',
+        'gone',
+        $content,
+    )));
 
     $out = $formatter->format('view.blade.php', $in);
 
@@ -66,9 +69,11 @@ it('hands back the untouched file when an embedded Blade placeholder cannot be r
         '',
     ]);
 
-    $formatter = new BladeFormatter(fakePrettier(
-        fn (string $content): string => (string) preg_replace('/__PINT_BLADE_\d+__/', 'gone', $content),
-    ));
+    $formatter = new BladeFormatter(fakePrettier(fn (string $content): string => (string) preg_replace(
+        '/__PINT_BLADE_\d+__/',
+        'gone',
+        $content,
+    )));
 
     $out = $formatter->format('view.blade.php', $in);
 

@@ -1,5 +1,3 @@
 {
-    "rules": {
-        "Pint/laravel_blade": false
-    }
+    "blade": false
 }

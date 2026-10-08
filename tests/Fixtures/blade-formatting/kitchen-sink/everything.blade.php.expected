@@ -148,7 +148,7 @@
         @php $i = 0; @endphp
         @while ($i < $limit)
             @php $i++; @endphp
-            @continue($i % 2 === 0)
+            @continue(($i % 2) === 0)
             @if ($i > 100) @break @endif
             <span>{{ $i }}</span>
         @endwhile
@@ -796,7 +796,10 @@ $summary = [
                     <input type="number" name="max" value="{{ request('max') }}" min="0" step="1" />
                 </div>
                 <button type="submit">Apply</button>
-                @if (request()->hasAny(['min', 'max']) || collect($filterGroups)->pluck('key')->contains(fn ($k) => request()->filled($k)))
+                @if (
+                    request()->hasAny(['min', 'max'])
+                    || collect($filterGroups)->pluck('key')->contains(fn ($k) => request()->filled($k))
+                )
                     <a href="{{ url()->current() }}">Clear filters</a>
                 @endif
             </form>
@@ -837,7 +840,12 @@ $summary = [
                 @foreach ($weeks as $week)
                     <tr>
                         @foreach ($week as $day)
-                            <td @class(['day', 'day--today' => $day['isToday'], 'day--outside' => ! $day['inMonth'], 'day--busy' => count($day['events']) > 0])>
+                            <td @class([
+                                'day',
+                                'day--today' => $day['isToday'],
+                                'day--outside' => ! $day['inMonth'],
+                                'day--busy' => count($day['events']) > 0,
+                            ])>
                                 <span class="day__number">{{ $day['number'] }}</span>
                                 @if (count($day['events']) > 0)
                                     <ul class="day__events">

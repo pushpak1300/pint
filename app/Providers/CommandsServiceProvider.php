@@ -31,7 +31,7 @@ class CommandsServiceProvider extends ServiceProvider
             return $command->handle(
                 resolve(FixCode::class),
                 resolve(ElaborateSummary::class),
-                resolve(EnsurePrettierIsConfigured::class)
+                resolve(EnsurePrettierIsConfigured::class),
             );
         });
     }

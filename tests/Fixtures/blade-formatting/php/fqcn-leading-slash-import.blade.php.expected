@@ -1,7 +1,7 @@
 <?php
 
-use App\Enums\CalculationMode as Mode;
-use App\Models\Category;
+use \App\Enums\CalculationMode as Mode;
+use \App\Models\Category;
 
 $rows = Category::all();
 ?>

@@ -5,7 +5,7 @@ use App\Fixers\LaravelBlade\Ignorables\EmailView;
 use App\Fixers\LaravelBlade\Ignorables\Envoy;
 
 it('ignores envoy files by name', function (string $path, bool $expected) {
-    expect((new Envoy)($path))->toBe($expected);
+    expect(new Envoy()($path))->toBe($expected);
 })->with([
     ['/app/Envoy.blade.php', true],
     ['/app/envoy.blade.php', true],
@@ -14,7 +14,7 @@ it('ignores envoy files by name', function (string $path, bool $expected) {
 ]);
 
 it('ignores boost guidelines by path', function (string $path, bool $expected) {
-    expect((new BoostGuidelines)($path))->toBe($expected);
+    expect(new BoostGuidelines()($path))->toBe($expected);
 })->with([
     ['/app/resources/boost/guidelines/core.blade.php', true],
     ['/app/resources/boost/guidelines/nested/foo.blade.php', true],
@@ -24,7 +24,7 @@ it('ignores boost guidelines by path', function (string $path, bool $expected) {
 ]);
 
 it('ignores email views by path', function (string $path, bool $expected) {
-    expect((new EmailView)($path))->toBe($expected);
+    expect(new EmailView()($path))->toBe($expected);
 })->with([
     ['/app/resources/views/emails/notification.blade.php', true],
     ['/app/resources/views/emails/nested/welcome.blade.php', true],

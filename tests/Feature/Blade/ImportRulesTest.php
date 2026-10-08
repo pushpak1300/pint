@@ -10,7 +10,7 @@ use Symfony\Component\Process\Process;
  * @param  array<string, mixed>  $rules
  * @return array<string, string>
  */
-function formatWithRules(array $files, array $rules): array
+function formatWithRules(array $files, array $rules, string $fixSafety = 'safe'): array
 {
     $tmp = freshBladeTempDirectory();
 
@@ -19,17 +19,20 @@ function formatWithRules(array $files, array $rules): array
         file_put_contents($tmp.'/'.$path, $contents);
     }
 
-    file_put_contents($tmp.'/pint.json', json_encode(['preset' => 'laravel', 'rules' => $rules]));
+    file_put_contents($tmp.'/pint.json', json_encode([
+        'preset' => 'laravel',
+        'blade' => true,
+        'fix-safety' => $fixSafety,
+        'linter' => ['rules' => $rules],
+    ]));
 
-    $process = new Process(['php', 'pint', '--blade', '--config', $tmp.'/pint.json', $tmp], base_path());
+    $process = new Process(['php', 'pint', '--config', $tmp.'/pint.json', $tmp], base_path());
 
     $process->setTimeout(120);
     $process->run();
 
-    expect($process->getExitCode())->toBe(
-        0,
-        'pint --blade failed: '.$process->getErrorOutput().$process->getOutput(),
-    );
+    expect($process->getExitCode())
+        ->toBe(0, 'pint --blade failed: '.$process->getErrorOutput().$process->getOutput());
 
     return array_combine(
         array_keys($files),
@@ -39,109 +42,121 @@ function formatWithRules(array $files, array $rules): array
 
 it('does not declare strict types on a blade template', function () {
     $blade = <<<'BLADE'
-    <div>
-        <?php $rows = collect([]); ?>
-    </div>
+        <div>
+            <?php $rows = collect([]); ?>
+        </div>
 
-    BLADE;
+        BLADE;
 
     $php = <<<'PHP'
-    <?php
+        <?php
 
-    $rows = collect([]);
+        $rows = collect([]);
 
-    PHP;
+        PHP;
 
     $formatted = formatWithRules(
         ['view.blade.php' => $blade, 'helpers.php' => $php],
-        ['declare_strict_types' => true],
+        ['strict-types' => ['enabled' => true]],
+        fixSafety: 'unsafe',
     );
 
-    expect($formatted['view.blade.php'])->not->toContain('declare(strict_types=1)')
+    expect($formatted['view.blade.php'])
+        ->not
+        ->toContain('declare(strict_types=1)')
         // The same rule on a plain ".php" file still applies as usual.
-        ->and($formatted['helpers.php'])->toContain('declare(strict_types=1)');
+        ->and($formatted['helpers.php'])
+        ->toContain('declare(strict_types=1)');
 });
 
 it('does not import the global namespace into a blade template', function () {
     $blade = <<<'BLADE'
-    <div>
+        <div>
+            <?php
+            namespace App\Views;
+
+            $date = new \DateTimeImmutable('now');
+            ?>
+        </div>
+
+        BLADE;
+
+    $php = <<<'PHP'
         <?php
+
         namespace App\Views;
 
         $date = new \DateTimeImmutable('now');
-        ?>
-    </div>
 
-    BLADE;
+        PHP;
 
-    $php = <<<'PHP'
-    <?php
+    $formatted = formatWithRules([
+        'view.blade.php' => $blade,
+        'helpers.php' => $php,
+    ], ['no-fully-qualified-global-class-like' => ['enabled' => true]]);
 
-    namespace App\Views;
-
-    $date = new \DateTimeImmutable('now');
-
-    PHP;
-
-    $formatted = formatWithRules(
-        ['view.blade.php' => $blade, 'helpers.php' => $php],
-        ['global_namespace_import' => ['import_classes' => true]],
-    );
-
-    expect($formatted['view.blade.php'])->not->toContain('use DateTimeImmutable;')
-        ->and($formatted['helpers.php'])->toContain('use DateTimeImmutable;');
+    expect($formatted['view.blade.php'])
+        ->not
+        ->toContain('use DateTimeImmutable;')
+        ->and($formatted['helpers.php'])
+        ->toContain('use DateTimeImmutable;');
 });
 
-it('does not import symbols into a blade template, whatever the fixer is configured to do', function () {
+it('does not import qualified class references into a blade template', function () {
     $blade = <<<'BLADE'
-    <div>
-        <?php $rows = \App\Models\Category::all(); ?>
-    </div>
+        <div>
+            <?php $rows = \App\Models\Category::all(); ?>
+        </div>
 
-    BLADE;
+        BLADE;
 
     $php = <<<'PHP'
-    <?php
+        <?php
 
-    $rows = \App\Models\Category::all();
+        $rows = \App\Models\Category::all();
 
-    PHP;
+        PHP;
 
-    $formatted = formatWithRules(
-        ['view.blade.php' => $blade, 'helpers.php' => $php],
-        ['fully_qualified_strict_types' => ['import_symbols' => true, 'leading_backslash_in_global_namespace' => true]],
-    );
+    $formatted = formatWithRules([
+        'view.blade.php' => $blade,
+        'helpers.php' => $php,
+    ], ['no-fully-qualified-global-class-like' => ['enabled' => true]]);
 
-    expect($formatted['view.blade.php'])->toContain('\App\Models\Category::all()')
-        ->not->toContain('use App\Models\Category;')
-        ->and($formatted['helpers.php'])->toContain('use App\Models\Category;');
+    expect($formatted['view.blade.php'])
+        ->toContain('\App\Models\Category::all()')
+        ->not
+        ->toContain('use App\Models\Category;')
+        ->and($formatted['helpers.php'])
+        ->toContain('use App\Models\Category;');
 });
 
 it('still drops the unused imports of a plain php file that lives among the views', function () {
     $blade = <<<'BLADE'
-    <?php
+        <?php
 
-    use App\Enums\CalculationMode;
-    ?>
+        use App\Enums\CalculationMode;
+        ?>
 
-    <div class="grid grid-cols-{{ CalculationMode::count() }}"></div>
+        <div class="grid grid-cols-{{ CalculationMode::count() }}"></div>
 
-    BLADE;
+        BLADE;
 
     $php = <<<'PHP'
-    <?php
+        <?php
 
-    use App\Enums\CalculationMode;
+        use App\Enums\CalculationMode;
 
-    $mode = 'all';
+        $mode = 'all';
 
-    PHP;
+        PHP;
 
-    $formatted = formatWithRules(
-        ['resources/views/card.blade.php' => $blade, 'resources/views/helpers.php' => $php],
-        ['no_unused_imports' => true],
-    );
+    $formatted = formatWithRules([
+        'resources/views/card.blade.php' => $blade,
+        'resources/views/helpers.php' => $php,
+    ], ['no-redundant-use' => ['enabled' => true]]);
 
-    expect($formatted['resources/views/card.blade.php'])->toContain('use App\Enums\CalculationMode;')
-        ->and($formatted['resources/views/helpers.php'])->not->toContain('use App\Enums\CalculationMode;');
+    expect($formatted['resources/views/card.blade.php'])
+        ->toContain('use App\Enums\CalculationMode;')
+        ->and($formatted['resources/views/helpers.php'])
+        ->not->toContain('use App\Enums\CalculationMode;');
 });

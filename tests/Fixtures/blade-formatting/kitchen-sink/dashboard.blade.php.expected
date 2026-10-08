@@ -38,8 +38,8 @@
         <div>
             {{
                 $user->subscription->active
-                ? 'Subscribed and enjoying all of the premium features that we offer'
-                : 'Not subscribed to any plan at the moment, please consider upgrading'
+                    ? 'Subscribed and enjoying all of the premium features that we offer'
+                    : 'Not subscribed to any plan at the moment, please consider upgrading'
             }}
         </div>
         <p>{{ collect($metrics)->map(fn ($m) => $m->value)->filter()->sum() }}</p>

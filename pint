@@ -17,19 +17,6 @@ define('LARAVEL_START', microtime(true));
 
 $autoloader = require file_exists(__DIR__.'/vendor/autoload.php') ?  __DIR__.'/vendor/autoload.php' : __DIR__.'/../../autoload.php';
 
-$autoloader->addClassMap([
-    'PhpCsFixer\FixerFactory' => __DIR__.'/overrides/FixerFactory.php',
-    'PhpCsFixer\Runner\Parallel\ProcessFactory' => __DIR__.'/overrides/Runner/Parallel/ProcessFactory.php',
-]);
-
-if (($argv[1] ?? null) === 'worker') {
-    $app = require_once __DIR__.'/bootstrap/app.php';
-
-    $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-
-    return include __DIR__.'/vendor/bin/php-cs-fixer';
-}
-
 $app = require_once __DIR__.'/bootstrap/app.php';
 
 /*

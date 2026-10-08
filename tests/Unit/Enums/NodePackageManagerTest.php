@@ -59,7 +59,10 @@ it('exposes the package manager binary', function (NodePackageManager $manager, 
     'bun' => [NodePackageManager::Bun, 'bun'],
 ]);
 
-it('builds the development install command for each package manager', function (NodePackageManager $manager, array $command) {
+it('builds the development install command for each package manager', function (
+    NodePackageManager $manager,
+    array $command,
+) {
     expect($manager->installCommand(['prettier@^3', 'prettier-plugin-blade']))->toBe($command);
 })->with([
     'npm' => [NodePackageManager::Npm, ['npm', 'install', '-D', 'prettier@^3', 'prettier-plugin-blade']],

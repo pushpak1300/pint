@@ -7,8 +7,8 @@ use App\Actions\FixCode;
 use App\Output\ProgressOutput;
 use App\Output\SummaryOutput;
 use App\Repositories\ConfigurationJsonRepository;
+use App\ValueObjects\ErrorsManager;
 use Illuminate\Support\ServiceProvider;
-use PhpCsFixer\Error\ErrorsManager;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -42,7 +42,7 @@ class ActionsServiceProvider extends ServiceProvider
                     resolve(EventDispatcher::class),
                     resolve(InputInterface::class),
                     resolve(OutputInterface::class),
-                )
+                ),
             );
         });
 
@@ -56,7 +56,7 @@ class ActionsServiceProvider extends ServiceProvider
                     resolve(ErrorsManager::class),
                     resolve(InputInterface::class),
                     resolve(OutputInterface::class),
-                )
+                ),
             );
         });
     }

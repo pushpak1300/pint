@@ -3,13 +3,12 @@
 it('has a dedicated test file for every fixture group', function (string $group) {
     $studly = str_replace(' ', '', ucwords(str_replace('-', ' ', $group)));
 
-    expect(__DIR__."/{$studly}Test.php")->toBeFile(
-        "Fixture group [{$group}] is missing its test file [{$studly}Test.php]. Add it with: bladeFixtureTest('{$group}');",
-    );
+    expect(__DIR__."/{$studly}Test.php")
+        ->toBeFile(
+            "Fixture group [{$group}] is missing its test file [{$studly}Test.php]. Add it with: bladeFixtureTest('{$group}');",
+        );
 
-    expect(bladeFixtureGroupFiles($group))->not->toBeEmpty(
-        "Fixture group [{$group}] has no fixtures.",
-    );
+    expect(bladeFixtureGroupFiles($group))->not->toBeEmpty("Fixture group [{$group}] has no fixtures.");
 })->with(fn () => array_map('basename', glob(bladeFixtureRoot().'/*', GLOB_ONLYDIR)));
 
 it('pairs every blade fixture with a golden file', function () {

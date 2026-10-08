@@ -1,6 +1,5 @@
 <?php
 
-use App\Fixers\PrettierCacheFingerprint;
 use Symfony\Component\Process\Process;
 
 /**
@@ -40,8 +39,14 @@ beforeEach(function () {
     mkdir($this->directory.'/resources/views', 0777, true);
 
     file_put_contents($this->directory.'/pint.json', '{"preset":"laravel"}'."\n");
-    file_put_contents($this->directory.'/resources/views/welcome.blade.php', "<div   class=\"p-4 flex\"><x-foo    :bar=\"\$baz\"/></div>\n");
-    file_put_contents($this->directory.'/Example.php', "<?php\n\nclass Example\n{\n    public function handle()\n    {\n        return array(1, 2);\n    }\n}\n");
+    file_put_contents(
+        $this->directory.'/resources/views/welcome.blade.php',
+        "<div   class=\"p-4 flex\"><x-foo    :bar=\"\$baz\"/></div>\n",
+    );
+    file_put_contents(
+        $this->directory.'/Example.php',
+        "<?php\n\nclass Example\n{\n    public function handle()\n    {\n        return array(1, 2);\n    }\n}\n",
+    );
 });
 
 afterEach(function () {
@@ -61,28 +66,39 @@ it('uses the cache when blade formatting is active', function () {
 
     $cached = array_map('basename', array_keys($signature['hashes']));
 
-    expect($signature['rules'])->toHaveKey('Pint/laravel_blade')
-        ->and($cached)->toContain('welcome.blade.php')
-        ->and($cached)->toContain('Example.php');
+    expect($signature['signature'])
+        ->toHaveKeys(['pint', 'mago', 'blade', 'prettier'])
+        ->and($signature['signature']['blade'])
+        ->toBeTrue()
+        ->and($signature['signature']['mago'])
+        ->toMatch('/^[a-f0-9]{64}$/')
+        ->and($cached)
+        ->toContain('welcome.blade.php')
+        ->and($cached)
+        ->toContain('Example.php');
+
+    foreach ($signature['hashes'] as $path => $hash) {
+        expect($hash)->toBe(hash_file('sha256', $path));
+    }
 });
 
 it('carries the prettier fingerprints in the cache signature', function () {
     expect(runPintWithCache($this->directory, $this->cacheFile, ['--blade']))->toBe(0);
 
-    $rules = cacheSignature($this->cacheFile)['rules'];
-    $fingerprints = $rules[(new PrettierCacheFingerprint)->getName()]['fingerprints'] ?? null;
+    $fingerprints = cacheSignature($this->cacheFile)['signature']['prettier'];
 
-    expect($fingerprints)->toHaveKey('Pint/laravel_blade')
-        ->and($fingerprints['Pint/laravel_blade'])->toMatch('/^[a-f0-9]{32}$/');
+    expect($fingerprints)
+        ->toHaveKey('Pint/laravel_blade')
+        ->and($fingerprints['Pint/laravel_blade'])
+        ->toMatch('/^[a-f0-9]{32}$/');
 });
 
 it('does not carry prettier fingerprints when blade formatting is inactive', function () {
     expect(runPintWithCache($this->directory, $this->cacheFile))->toBe(0);
 
-    $rules = cacheSignature($this->cacheFile)['rules'];
+    $signature = cacheSignature($this->cacheFile)['signature'];
 
-    expect($rules)->not->toHaveKey((new PrettierCacheFingerprint)->getName())
-        ->and($rules)->not->toHaveKey('Pint/laravel_blade');
+    expect($signature['prettier'])->toBe([])->and($signature['blade'])->toBeFalse();
 });
 
 it('reports no changes on a second run served from the cache', function () {
@@ -90,6 +106,8 @@ it('reports no changes on a second run served from the cache', function () {
 
     $signature = cacheSignature($this->cacheFile);
 
-    expect(runPintWithCache($this->directory, $this->cacheFile, ['--blade', '--test']))->toBe(0)
-        ->and(cacheSignature($this->cacheFile))->toBe($signature);
+    expect(runPintWithCache($this->directory, $this->cacheFile, ['--blade', '--test']))
+        ->toBe(0)
+        ->and(cacheSignature($this->cacheFile))
+        ->toBe($signature);
 });

@@ -1,18 +1,10 @@
 <?php
 
-use function Illuminate\Filesystem\join_paths;
+use Illuminate\Support\Facades\Process;
 
-it('fixes the code', function () {
-    [$statusCode, $output] = run('default', [
-        'path' => base_path('tests/Fixtures/fixers/phpunit_method_casing.php'),
-        '--preset' => 'laravel',
-    ]);
+it('preserves PHPUnit method casing until a custom extension is approved', function () {
+    $input = file_get_contents(base_path('tests/Fixtures/fixers/phpunit_method_casing.php'));
+    $result = Process::input($input)->run('php pint -')->throw();
 
-    expect($statusCode)->toBe(1)
-        ->and($output)
-        ->toContain('  ⨯ '.join_paths('tests', 'Fixtures', 'fixers', 'phpunit_method_casing.php'))
-        ->toContain(<<<'DIFF'
-              -    public function testItConvertsToSnakeCase()
-              +    public function test_it_converts_to_snake_case()
-            DIFF);
+    expect($result->output())->toBe($input);
 });

@@ -16,8 +16,7 @@ it('restores the separator prettier ate before an escaped directive', function (
 });
 
 it('restores the separator when prettier joined two lines', function () {
-    expect(spaceEscaped("<p>\n    A\n    @@endif\n</p>\n", '<p>A@@endif</p>'."\n"))
-        ->toBe('<p>A @@endif</p>'."\n");
+    expect(spaceEscaped("<p>\n    A\n    @@endif\n</p>\n", '<p>A@@endif</p>'."\n"))->toBe('<p>A @@endif</p>'."\n");
 });
 
 it('leaves an escaped directive that already had room alone', function () {
@@ -46,8 +45,7 @@ it('repairs a pair prettier broke even when another pair was glued in the source
     $source = "<?php \$mail = 'user@@example'; ?>\n<div>\n    Text @@if more\n</div>\n";
     $formatted = "<?php \$mail = 'user@@example'; ?>\n<div>Text@@if more</div>\n";
 
-    expect(spaceEscaped($source, $formatted))
-        ->toBe("<?php \$mail = 'user@@example'; ?>\n<div>Text @@if more</div>\n");
+    expect(spaceEscaped($source, $formatted))->toBe("<?php \$mail = 'user@@example'; ?>\n<div>Text @@if more</div>\n");
 });
 
 it('leaves every occurrence of a pair the source glued alone', function () {

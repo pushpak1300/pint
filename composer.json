@@ -16,7 +16,7 @@
         }
     ],
     "require": {
-        "php": "^8.3.0",
+        "php": "^8.4.0",
         "ext-json": "*",
         "ext-mbstring": "*",
         "ext-tokenizer": "*",
@@ -24,15 +24,16 @@
     },
     "require-dev": {
         "composer/semver": "^3.4.4",
-        "friendsofphp/php-cs-fixer": "^3.95.25",
         "illuminate/view": "^13.31.0",
         "larastan/larastan": "^3.11.0",
         "laravel-zero/framework": "^13.0.0",
+        "laravel/agent-detector": "^2.0.2",
         "laravel/prompts": "^0.3.24",
         "mockery/mockery": "^1.6.15",
         "nunomaduro/termwind": "^2.4.0",
         "pestphp/pest": "^4.7.8",
-        "laravel/agent-detector": "^2.0.2"
+        "sebastian/diff": "^7.0",
+        "symfony/filesystem": "^7.4"
     },
     "autoload": {
         "psr-4": {
@@ -52,7 +53,7 @@
         "sort-packages": true,
         "optimize-autoloader": true,
         "platform": {
-            "php": "8.3.0"
+            "php": "8.4.0"
         },
         "allow-plugins": {
             "pestphp/pest-plugin": true

@@ -5,11 +5,11 @@ namespace App\Output;
 use App\Output\Concerns\InteractsWithSymbols;
 use App\Project;
 use App\Repositories\ConfigurationJsonRepository;
+use App\ValueObjects\ErrorsManager;
+use App\ValueObjects\FileProcessed;
 use App\ValueObjects\Issue;
+use App\ValueObjects\ReportSummary;
 use Illuminate\Support\Collection;
-use PhpCsFixer\Console\Report\FixReport\ReportSummary;
-use PhpCsFixer\Error\ErrorsManager;
-use PhpCsFixer\Runner\Event\FileProcessed;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -30,7 +30,6 @@ class SummaryOutput
         'psr12' => 'PSR 12',
         'laravel' => 'Laravel',
         'symfony' => 'Symfony',
-        'empty' => 'Empty',
     ];
 
     /**
@@ -64,14 +63,12 @@ class SummaryOutput
 
         $issues = $this->getIssues(Project::path(), $summary);
 
-        render(
-            view('summary', [
-                'totalFiles' => $totalFiles,
-                'issues' => $issues,
-                'testing' => $summary->isDryRun(),
-                'preset' => $this->presets[$this->config->preset()],
-            ]),
-        );
+        render(view('summary', [
+            'totalFiles' => $totalFiles,
+            'issues' => $issues,
+            'testing' => $summary->isDryRun(),
+            'preset' => $this->presets[$this->config->preset()],
+        ]));
 
         foreach ($issues as $issue) {
             render(view('issue.show', [
@@ -81,9 +78,7 @@ class SummaryOutput
             ]));
 
             if ($this->output->isVerbose() && $issue->code()) {
-                $this->output->writeln(
-                    $issue->code(),
-                );
+                $this->output->writeln($issue->code());
             }
         }
 
@@ -99,30 +94,34 @@ class SummaryOutput
      */
     public function getIssues($path, $summary)
     {
-        $issues = collect($summary->getChanged())
-            ->map(fn ($information, $file) => new Issue(
+        $issues = collect($summary->getChanged())->map(
+            fn ($information, $file) => new Issue(
                 $path,
                 $file,
                 $this->getSymbol(FileProcessed::STATUS_FIXED),
                 $information,
-            ))
-            ->values();
+            ),
+        )->values();
 
-        return $issues->merge(
-            collect(
-                $this->errors->getInvalidErrors()
-                + $this->errors->getExceptionErrors()
-                + $this->errors->getLintErrors()
-            )->map(fn ($error) => new Issue(
-                $path,
-                $error->getFilePath(),
-                $this->getSymbolFromErrorType($error->getType()),
-                [
-                    'source' => $error->getSource(),
-                ],
-            )),
-        )->sort(function ($issueA, $issueB) {
-            return $issueA <=> $issueB;
-        })->values();
+        return $issues
+            ->merge(collect(array_merge(
+                $this->errors->getInvalidErrors(),
+                $this->errors->getExceptionErrors(),
+                $this->errors->getLintErrors(),
+            ))->map(
+                fn ($error) => new Issue(
+                    $path,
+                    $error->getFilePath(),
+                    $this->getSymbolFromErrorType($error->getType()),
+                    [
+                        'source' => $error->getSource(),
+                        'line' => $error->getSourceLine(),
+                    ],
+                ),
+            ))
+            ->sort(function ($issueA, $issueB) {
+                return $issueA <=> $issueB;
+            })
+            ->values();
     }
 }

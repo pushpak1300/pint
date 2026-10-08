@@ -30,6 +30,5 @@ it('may be fixable or not', function () {
     $fixable = new Issue(__DIR__, __FILE__, 'F', ['appliedFixers' => 'rule_a']);
     $nonFixable = new Issue(__DIR__, __FILE__, 'F', []);
 
-    expect($fixable->fixable())->toBeTrue()
-        ->and($nonFixable->fixable())->toBeFalse();
+    expect($fixable->fixable())->toBeTrue()->and($nonFixable->fixable())->toBeFalse();
 });

@@ -6,9 +6,10 @@ use App\Actions\EnsurePrettierIsConfigured;
 use App\BladeFormatter;
 use App\Project;
 use App\Repositories\ConfigurationJsonRepository;
+use App\Support\Mago;
 use App\Support\Prettier;
+use App\ValueObjects\ErrorsManager;
 use Illuminate\Support\ServiceProvider;
-use PhpCsFixer\Error\ErrorsManager;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,6 +31,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        $this->app->singleton(Mago::class);
+
         $this->app->singleton(ErrorsManager::class, function () {
             return new ErrorsManager;
         });

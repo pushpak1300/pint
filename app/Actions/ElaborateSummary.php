@@ -4,12 +4,12 @@ namespace App\Actions;
 
 use App\Factories\ConfigurationResolverFactory;
 use App\Output\AgentReporter;
+use App\Output\Reporter;
 use App\Output\SummaryOutput;
 use App\Project;
+use App\ValueObjects\ErrorsManager;
+use App\ValueObjects\ReportSummary;
 use Illuminate\Console\Command;
-use PhpCsFixer\Console\Report\FixReport;
-use PhpCsFixer\Console\Report\FixReport\ReportSummary;
-use PhpCsFixer\Error\ErrorsManager;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -50,7 +50,7 @@ class ElaborateSummary
             0,
             $this->output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE,
             $this->input->getOption('test') || $this->input->getOption('bail'),
-            $this->output->isDecorated()
+            $this->output->isDecorated(),
         );
 
         $format = $this->input->getOption('format');
@@ -65,7 +65,13 @@ class ElaborateSummary
             $this->summaryOutput->handle($summary, $totalFiles);
         }
 
-        if (($file = $this->input->getOption('output-to-file')) && (($outputFormat = $this->input->getOption('output-format')) || $format)) {
+        if (
+            ($file = $this->input->getOption('output-to-file'))
+            && (
+                ($outputFormat = $this->input->getOption('output-format'))
+                || $format
+            )
+        ) {
             $this->displayUsingFormatter($summary, $outputFormat ?: $format, $file);
         }
 
@@ -73,7 +79,8 @@ class ElaborateSummary
             $this->writeErrorsToErrorOutput();
         }
 
-        $failure = (($summary->isDryRun() || $this->input->getOption('repair')) && count($changes) > 0)
+        $failure =
+            ($summary->isDryRun() || $this->input->getOption('repair')) && count($changes) > 0
             || count($this->errors->getInvalidErrors()) > 0
             || count($this->errors->getExceptionErrors()) > 0
             || count($this->errors->getLintErrors()) > 0;
@@ -93,12 +100,7 @@ class ElaborateSummary
     {
         $reporter = match ($format) {
             'agent' => new AgentReporter($this->errors),
-            'checkstyle' => new FixReport\CheckstyleReporter,
-            'gitlab' => new FixReport\GitlabReporter,
-            'json' => new FixReport\JsonReporter,
-            'junit' => new FixReport\JunitReporter,
-            'txt' => new FixReport\TextReporter,
-            'xml' => new FixReport\XmlReporter,
+            'checkstyle', 'gitlab', 'json', 'junit', 'txt', 'xml' => new Reporter($format),
             default => abort(1, sprintf('Format [%s] is not supported.', $format)),
         };
 
@@ -127,12 +129,10 @@ class ElaborateSummary
             : $this->output;
 
         foreach ($issues as $issue) {
-            $errorOutput->writeln(sprintf(
-                '  %s %s: %s',
-                $issue->symbol(),
-                $issue->file(),
-                $issue->description($summary->isDryRun()),
-            ), OutputInterface::VERBOSITY_QUIET);
+            $errorOutput->writeln(
+                sprintf('  %s %s: %s', $issue->symbol(), $issue->file(), $issue->description($summary->isDryRun())),
+                OutputInterface::VERBOSITY_QUIET,
+            );
         }
     }
 
@@ -144,7 +144,7 @@ class ElaborateSummary
         $allErrors = array_merge(
             $this->errors->getInvalidErrors(),
             $this->errors->getExceptionErrors(),
-            $this->errors->getLintErrors()
+            $this->errors->getLintErrors(),
         );
 
         if (count($allErrors) === 0) {
