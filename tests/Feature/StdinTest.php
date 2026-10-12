@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Process;
 
 it('formats code from stdin', function (string $input, ?string $expected) {
-    $result = Process::input($input)->run('php pint - --stdin-filename=app/Test.php')->throw();
+    $result = Process::input($input)->run('php pint format - --stdin-filename=app/Test.php')->throw();
 
     expect($result)
         ->output()
@@ -81,7 +81,7 @@ it('formats code from stdin without filename', function () {
 
         PHP;
 
-    $result = Process::input($input)->run('php pint -')->throw();
+    $result = Process::input($input)->run('php pint format -')->throw();
 
     expect($result)->output()->toBe($expected)->errorOutput()->toBe('');
 });
@@ -99,7 +99,7 @@ it('uses stdin-filename for context', function () {
 
         PHP;
 
-    $result = Process::input($input)->run('php pint - --stdin-filename=app/Models/User.php')->throw();
+    $result = Process::input($input)->run('php pint format - --stdin-filename=app/Models/User.php')->throw();
 
     expect($result)->output()->toBe($expected)->errorOutput()->toBe('');
 });
@@ -117,7 +117,7 @@ it('formats code from stdin using only stdin-filename option', function () {
 
         PHP;
 
-    $result = Process::input($input)->run('php pint --stdin-filename=app/Models/Example.php')->throw();
+    $result = Process::input($input)->run('php pint format --stdin-filename=app/Models/Example.php')->throw();
 
     expect($result)->output()->toBe($expected)->errorOutput()->toBe('');
 });
@@ -128,7 +128,7 @@ it('skips formatting for excluded paths', function (string $filename) {
         $array = array("foo","bar");
         PHP;
 
-    $result = Process::input($input)->run("php pint --stdin-filename={$filename}")->throw();
+    $result = Process::input($input)->run("php pint format --stdin-filename={$filename}")->throw();
 
     expect($result)->output()->toBe($input)->errorOutput()->toBe('');
 })->with([
@@ -153,7 +153,7 @@ it('respects pint.json exclusion rules', function (string $filename, bool $shoul
 
     $result = Process::input($input)
         ->path(base_path('tests/Fixtures/finder'))
-        ->run('php '.base_path('pint')." --stdin-filename={$filename}")
+        ->run('php '.base_path('pint')." format --stdin-filename={$filename}")
         ->throw();
 
     expect($result)->output()->toBe($expected)->errorOutput()->toBe('');
@@ -187,7 +187,7 @@ it('preserves class names rather than applying the removed filename derived fixe
 
     $result = Process::input($input)
         ->path(base_path('tests/Fixtures/psr-autoloading'))
-        ->run('php '.base_path('pint').' --stdin-filename=app/Models/User.php')
+        ->run('php '.base_path('pint').' format --stdin-filename=app/Models/User.php')
         ->throw();
 
     expect($result)->output()->toBe($expected)->errorOutput()->toBe('');
@@ -207,7 +207,7 @@ it('preserves class names across common Laravel stdin paths', function (string $
 
     $result = Process::input($input)
         ->path(base_path('tests/Fixtures/psr-autoloading'))
-        ->run('php '.base_path('pint').' --stdin-filename='.escapeshellarg($path))
+        ->run('php '.base_path('pint').' format --stdin-filename='.escapeshellarg($path))
         ->throw();
 
     expect($result->output())
@@ -234,7 +234,7 @@ it('leaves Laravel files whose name is not a class name untouched', function (
 ) {
     $result = Process::input($input)
         ->path(base_path('tests/Fixtures/psr-autoloading'))
-        ->run('php '.base_path('pint').' --stdin-filename='.escapeshellarg($path))
+        ->run('php '.base_path('pint').' format --stdin-filename='.escapeshellarg($path))
         ->throw();
 
     expect($result->output())->toBe($expected)->and($result->output())->not->toContain('pint_stdin_');
@@ -322,7 +322,7 @@ it('formats a Blade view from stdin when the Blade rule is enabled', function ()
     $result = Process::input($input)->run(
         'php '
         .base_path('pint')
-        .' --config '
+        .' format --config '
         .base_path('tests/Fixtures/stdin-blade/pint.json')
         .' --stdin-filename=resources/views/welcome.blade.php',
     )->throw();
@@ -344,7 +344,7 @@ it('formats code from stdin when the filename has no basename', function () {
 
         PHP;
 
-    $result = Process::input($input)->run('php '.base_path('pint').' --stdin-filename=/')->throw();
+    $result = Process::input($input)->run('php '.base_path('pint').' format --stdin-filename=/')->throw();
 
     expect($result)->output()->toBe($expected)->errorOutput()->toBe('');
 });
@@ -354,7 +354,7 @@ it('fails when the temporary directory cannot be created', function () {
     $unusable = base_path('composer.json').DIRECTORY_SEPARATOR.'temp';
 
     $result = Process::input('<?php $a=1;')->env(['TMPDIR' => $unusable, 'TMP' => $unusable, 'TEMP' => $unusable])->run(
-        'php '.base_path('pint').' --quiet --stdin-filename=app/Test.php',
+        'php '.base_path('pint').' format --quiet --stdin-filename=app/Test.php',
     );
 
     expect($result->exitCode())
@@ -364,3 +364,33 @@ it('fails when the temporary directory cannot be created', function () {
         ->and($result->output())
         ->not->toContain('$a = 1');
 })->skipOnWindows();
+
+it('rejects git selection in stdin mode without writing disk files', function (string $mode, string $selection) {
+    $directory = freshBladeTempDirectory();
+    $source = '<?php $disk=1;';
+    file_put_contents($directory.'/Example.php', $source);
+
+    Process::path($directory)->run('git init --quiet')->throw();
+    Process::path($directory)->run(
+        'git -c user.name=Pint -c user.email=pint@example.com commit --allow-empty --quiet -m baseline',
+    )->throw();
+
+    $result = Process::path($directory)->input('<?php $stdin=2;')->run(
+        'php '.base_path('pint').' format --no-config --cache-file=.pint.cache '.$mode.' '.$selection,
+    );
+
+    expect($result->exitCode())
+        ->toBe(1)
+        ->and($result->output().$result->errorOutput())
+        ->toContain('cannot be used with stdin')
+        ->and(file_get_contents($directory.'/Example.php'))
+        ->toBe($source)
+        ->and(file_exists($directory.'/.pint.cache'))
+        ->toBeFalse();
+})->with([
+    'placeholder dirty' => ['-', '--dirty'],
+    'placeholder diff' => ['-', '--diff=HEAD'],
+    'filename dirty' => ['--stdin-filename=app/Input.php', '--dirty'],
+    'filename diff' => ['--stdin-filename=app/Input.php', '--diff=HEAD'],
+    'excluded context dirty' => ['--stdin-filename=storage/Input.php', '--dirty'],
+]);

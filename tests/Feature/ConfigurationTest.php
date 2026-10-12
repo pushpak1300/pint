@@ -1,6 +1,7 @@
 <?php
 
 use LaravelZero\Framework\Exceptions\ConsoleException;
+use Symfony\Component\Process\Process;
 
 it('ensures configuration file is valid', function () {
     [$statusCode, $output] = run('default', [
@@ -14,15 +15,15 @@ it('rejects a configuration loaded over plaintext http', function () {
     ]);
 })->throws(ConsoleException::class, 'Loading the configuration over plaintext HTTP is not allowed. Use HTTPS.');
 
-it('rejects legacy top-level rules with migration guidance', function () {
+it('rejects unsupported legacy rules with migration guidance', function () {
     $file = testOutputFile();
-    file_put_contents($file, '{"rules":{"array_syntax":{"syntax":"short"}}}');
+    file_put_contents($file, '{"rules":{"phpdoc_align":true}}');
 
     run('default', [
         'path' => base_path('tests/Fixtures/without-issues-laravel'),
         '--config' => $file,
     ]);
-})->throws(ConsoleException::class, 'PHP-CS-Fixer [rules] are not supported');
+})->throws(RuntimeException::class, 'Unsupported Pint cleanup rule [phpdoc_align]');
 
 it('rejects the removed empty preset with migration guidance', function () {
     run('default', [
@@ -76,3 +77,28 @@ it('uses explicit paths over configured in paths', function () {
         ->and($output)
         ->not->toContain(implode(DIRECTORY_SEPARATOR, ['included', 'file.php']));
 });
+
+it('lets explicit files override finder exclusions but preserves directory discovery', function (
+    string $path,
+    bool $explicit,
+) {
+    $directory = freshBladeTempDirectory();
+    mkdir($directory.'/storage');
+    file_put_contents($directory.'/storage/A.php', '<?php $a=1;');
+    file_put_contents($directory.'/Visible.php', '<?php $a=1;');
+    file_put_contents($directory.'/pint.json', '{"notName":["A.php"]}');
+
+    $process = new Process(['php', base_path('pint'), 'format', '--format=json', $path], $directory);
+    $process->run();
+
+    expect($process->getExitCode())
+        ->toBe(0)
+        ->and(file_get_contents($directory.'/storage/A.php'))
+        ->toBe($explicit ? "<?php\n\n\$a = 1;\n" : '<?php $a=1;')
+        ->and(file_get_contents($directory.'/Visible.php'))
+        ->toBe($explicit ? '<?php $a=1;' : "<?php\n\n\$a = 1;\n");
+})->with([
+    'plain explicit file' => ['storage/A.php', true],
+    'dot explicit file' => ['./storage/A.php', true],
+    'directory control' => ['.', false],
+]);

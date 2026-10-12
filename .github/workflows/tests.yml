@@ -73,13 +73,13 @@ jobs:
         run: python scripts/stage-mago.py
 
       - name: Execute lint tests with Laravel preset
-        run: ./pint --test
+        run: ./pint format --test
 
       - name: Execute lint tests in parallel with Laravel preset
         # The skeleton's welcome.blade.php is not yet formatted to the Blade
         # preset, so failures here are tolerated until it is fixed upstream.
         continue-on-error: true
-        run: ./pint --parallel --blade --test
+        run: ./pint format --parallel --blade --test
 
       - name: Execute static analysis
         run: vendor/bin/phpstan
@@ -93,4 +93,11 @@ jobs:
         run: |
           php pint app:build pint --build-version=2.0.0-dev --no-interaction
           php builds/pint --version
-          php builds/pint --no-config --test tests/Fixtures/without-issues-laravel
+          php builds/pint format --no-config --test tests/Fixtures/without-issues-laravel
+
+      - name: Smoke test the bundled cleanup worker
+        if: matrix.php == '8.4'
+        shell: bash
+        run: |
+          output=$(printf '<?php class Example { function run() {} }' | php builds/pint format - --config=tests/Fixtures/mago/pinkary.json --stdin-filename=Example.php)
+          echo "$output" | grep -F 'public function run()'

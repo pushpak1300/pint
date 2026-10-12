@@ -6,8 +6,16 @@ use RuntimeException;
 
 final class MagoBinary
 {
-    public const VERSION = '1.53.0';
+    /**
+     * The bundled Mago version, part of the formatting cache fingerprint.
+     *
+     * @var string
+     */
+    public const VERSION = '1.56.0';
 
+    /**
+     * Get a verified executable for the current platform, extracting it if needed.
+     */
     public static function path(): string
     {
         $platform = self::platform(PHP_OS_FAMILY, php_uname('m'));
@@ -24,11 +32,13 @@ final class MagoBinary
         }
 
         $relative = $platform.'/'.($platform === 'windows-x64' ? 'mago.exe' : 'mago');
+
         if (($entry['file'] ?? null) !== $relative || ! preg_match('/^[a-f0-9]{64}$/D', $entry['sha256'] ?? '')) {
             throw new RuntimeException('Invalid bundled Mago manifest; reinstall Pint.');
         }
 
         $source = $root.'/'.$relative;
+
         self::verify($source, $entry['sha256']);
 
         if (! str_starts_with($source, 'phar://')) {
@@ -39,7 +49,16 @@ final class MagoBinary
             return $source;
         }
 
+        return self::extract($source, $platform, $entry['sha256']);
+    }
+
+    /**
+     * Get the private cache directory, rejecting unsafe permissions and symlinks.
+     */
+    private static function cacheDirectory(): string
+    {
         $home = PHP_OS_FAMILY === 'Windows' ? getenv('LOCALAPPDATA') : getenv('HOME');
+
         if (! $home || ! is_dir($home)) {
             throw new RuntimeException(
                 'Mago needs a writable private cache: set HOME (Unix) or LOCALAPPDATA (Windows).',
@@ -47,12 +66,15 @@ final class MagoBinary
         }
 
         $cache = $home.'/.pint-mago';
+
         if (! is_dir($cache) && ! @mkdir($cache, 0700) && ! is_dir($cache)) {
             throw new RuntimeException(
                 'Cannot create private Mago cache at '.$cache.'. Check directory permissions.',
             );
         }
+
         clearstatcache(true, $cache);
+
         if (
             is_link($cache)
             || ! is_writable($cache)
@@ -67,30 +89,47 @@ final class MagoBinary
             );
         }
 
-        $target =
-            $cache.'/'.self::VERSION.'-'.$platform.'-'.$entry['sha256'].($platform === 'windows-x64' ? '.exe' : '');
+        return $cache;
+    }
+
+    /**
+     * Extract the bundled executable under a lock, repairing corrupted cached files.
+     */
+    private static function extract(string $source, string $platform, string $digest): string
+    {
+        $cache = self::cacheDirectory();
+        $target = $cache.'/'.self::VERSION.'-'.$platform.'-'.$digest.($platform === 'windows-x64' ? '.exe' : '');
         $lockPath = $cache.'/extract.lock';
+
         if (is_link($lockPath) || ! ($lock = @fopen($lockPath, 'c')) || ! flock($lock, LOCK_EX)) {
             throw new RuntimeException('Cannot lock Mago cache at '.$cache.'.');
         }
 
         $temporary = null;
+
         try {
             clearstatcache(true, $target);
+
             if (is_link($target)) {
                 throw new RuntimeException('Unsafe symlink in Mago cache: '.$target);
             }
-            if (! is_file($target) || hash_file('sha256', $target) !== $entry['sha256']) {
+
+            if (! is_file($target) || hash_file('sha256', $target) !== $digest) {
                 $temporary = tempnam($cache, '.extract-');
+
                 if ($temporary === false || dirname($temporary) !== realpath($cache) || ! copy($source, $temporary)) {
                     throw new RuntimeException('Cannot extract bundled Mago into '.$cache.'.');
                 }
-                self::verify($temporary, $entry['sha256']);
+
+                self::verify($temporary, $digest);
+
                 if (! chmod($temporary, 0700) || ! @rename($temporary, $target)) {
                     throw new RuntimeException('Cannot install bundled Mago into '.$cache.'.');
                 }
             }
-            self::verify($target, $entry['sha256']);
+
+            self::verify($target, $digest);
+
             if (PHP_OS_FAMILY !== 'Windows' && ! is_executable($target) && ! chmod($target, 0700)) {
                 throw new RuntimeException('Cannot make cached Mago executable: '.$target);
             }
@@ -100,11 +139,15 @@ final class MagoBinary
             if ($temporary && is_file($temporary)) {
                 unlink($temporary);
             }
+
             flock($lock, LOCK_UN);
             fclose($lock);
         }
     }
 
+    /**
+     * Resolve the official binary platform for the operating system and architecture.
+     */
     private static function platform(string $os, string $architecture): string
     {
         $arch = match (strtolower($architecture)) {
@@ -128,6 +171,9 @@ final class MagoBinary
         return $family.'-'.$arch;
     }
 
+    /**
+     * Ensure an executable matches the digest from the bundled manifest.
+     */
     private static function verify(string $file, string $digest): void
     {
         if (! is_file($file) || hash_file('sha256', $file) !== $digest) {

@@ -21,11 +21,11 @@ it('places closure braces on the same line', function () {
             EOF);
 });
 
-it('keeps anonymous class braces on the same line', function () {
+it('places anonymous class braces on the next line for Laravel', function () {
     $input = file_get_contents(base_path('tests/Fixtures/fixers/braces.php'));
-    $result = Process::input($input)->run('php pint -')->throw();
+    $result = Process::input($input)->run('php pint format -')->throw();
 
     expect($result->output())
-        ->toContain("new class {\n    // ..\n};")
-        ->toContain("new class extends stdClass {\n    // ..\n};");
+        ->toContain("new class\n{\n    // ..\n};")
+        ->toContain("new class extends stdClass\n{\n    // ..\n};");
 });

@@ -14,9 +14,26 @@
 <a name="introduction"></a>
 ## Introduction
 
-**Laravel Pint** is an opinionated PHP code style fixer for minimalists. Pint 2.x uses **[Mago](https://mago.carthage.software/1.53.0/en/tools/formatter/overview/)** for PHP formatting and selected code cleanup.
+**Laravel Pint** is an opinionated code quality tool for Laravel. This experimental 2.x branch uses **[Mago](https://mago.carthage.software/1.56.0/en/tools/formatter/overview/)** for formatting, linting, static analysis, architecture checks, and selected refactors, configured through one optional `pint.json`.
 
 This branch is the Pint 2.x migration. See [UPGRADE.md](UPGRADE.md) for configuration changes and known differences. Source contributors must run `composer install`, `npm ci` (for Blade), and `python3 scripts/stage-mago.py` before running tests or building the bundled PHAR. Released builds include Mago; users do not install or download it separately.
+
+```sh
+vendor/bin/pint                   # Read-only checks; requires Laravel 12 or 13
+vendor/bin/pint fix               # Apply all enabled fixes, then check again
+vendor/bin/pint format            # Formatting-only compatibility workflow
+vendor/bin/pint lint              # Laravel lint rules
+vendor/bin/pint analyze           # Project-aware static analysis
+vendor/bin/pint guard             # Laravel conventions / configured architecture
+vendor/bin/pint refactor -v       # Preview refactors; --apply writes them
+```
+
+`fix` can change behavior for enabled rules: review its diff and run your tests.
+PHP 8.4+ is required. Analysis uses Mago plus Pint's bundled Laravel extension
+for model properties, local scopes, and static configuration types.
+It does not boot your application or run PHPStan,
+Larastan, or Rector. Full Larastan inference and Rector migration sets are not
+yet supported; see [analysis limits](UPGRADE.md#laravel-model-analysis).
 
 ## Official Documentation
 

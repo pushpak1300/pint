@@ -1,15 +1,15 @@
 <?php
 
 /*
- |--------------------------------------------------------------------------
- | Test Case
- |--------------------------------------------------------------------------
- |
- | The closure you provide to your test functions is always bound to a specific PHPUnit test
- | case class. By default, that class is "PHPUnit\Framework\TestCase". Of course, you may
- | need to change it using the "uses()" function to bind a different classes or traits.
- |
- */
+|--------------------------------------------------------------------------
+| Test Case
+|--------------------------------------------------------------------------
+|
+| The closure you provide to your test functions is always bound to a specific PHPUnit test
+| case class. By default, that class is "PHPUnit\Framework\TestCase". Of course, you may
+| need to change it using the "uses()" function to bind a different classes or traits.
+|
+*/
 
 use App\Commands\DefaultCommand;
 use Illuminate\Foundation\Console\Kernel;
@@ -72,18 +72,18 @@ class TestConsoleOutput extends BufferedOutput implements ConsoleOutputInterface
 }
 
 /*
- |--------------------------------------------------------------------------
- | Agent Detection
- |--------------------------------------------------------------------------
- |
- | Pint switches to the "agent" output format when it detects that it is being
- | run by an AI agent. When the suite itself runs inside one of those agents
- | that detection would change Pint's output and break assertions, so we clear
- | every known agent environment variable before each test to keep the suite
- | deterministic regardless of where it runs. Tests that exercise agent mode
- | opt back in by setting the relevant variable themselves.
- |
- */
+|--------------------------------------------------------------------------
+| Agent Detection
+|--------------------------------------------------------------------------
+|
+| Pint switches to the "agent" output format when it detects that it is being
+| run by an AI agent. When the suite itself runs inside one of those agents
+| that detection would change Pint's output and break assertions, so we clear
+| every known agent environment variable before each test to keep the suite
+| deterministic regardless of where it runs. Tests that exercise agent mode
+| opt back in by setting the relevant variable themselves.
+|
+*/
 
 uses(TestCase::class)->beforeEach(function () {
     foreach ([
@@ -227,14 +227,14 @@ function bladeFixtureFilesIn(string $root): array
 }
 
 /**
- * Run "pint --blade" once over a staged temporary project, asserting it exits
+ * Run "pint format --blade" once over a staged temporary project, asserting it exits
  * cleanly. The caller is responsible for staging the files beforehand.
  */
 function runPintBlade(string $tmp, bool $parallel = false): void
 {
     file_put_contents($tmp.'/pint.json', '{"preset":"laravel"}'."\n");
 
-    $command = ['php', 'pint', '--blade'];
+    $command = ['php', 'pint', 'format', '--blade'];
 
     if ($parallel) {
         $command[] = '--parallel';

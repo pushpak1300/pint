@@ -26,13 +26,13 @@ function formatWithRules(array $files, array $rules, string $fixSafety = 'safe')
         'linter' => ['rules' => $rules],
     ]));
 
-    $process = new Process(['php', 'pint', '--config', $tmp.'/pint.json', $tmp], base_path());
+    $process = new Process(['php', 'pint', 'format', '--config', $tmp.'/pint.json', $tmp], base_path());
 
     $process->setTimeout(120);
     $process->run();
 
     expect($process->getExitCode())
-        ->toBe(0, 'pint --blade failed: '.$process->getErrorOutput().$process->getOutput());
+        ->toBe(0, 'pint format --blade failed: '.$process->getErrorOutput().$process->getOutput());
 
     return array_combine(
         array_keys($files),

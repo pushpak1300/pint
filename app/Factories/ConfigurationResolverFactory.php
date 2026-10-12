@@ -27,7 +27,7 @@ class ConfigurationResolverFactory
                 }
                 if (is_dir($path)) {
                     $directories[] = $path;
-                } elseif (! ConfigurationFactory::isPathExcluded($path)) {
+                } else {
                     $files[] = realpath($path);
                 }
             }

@@ -10,7 +10,7 @@ use Symfony\Component\Process\Process;
 function runPintWithCache(string $directory, string $cacheFile, array $options = []): int
 {
     $command = array_merge(
-        ['php', 'pint', '--config', $directory.'/pint.json', '--cache-file', $cacheFile],
+        ['php', 'pint', 'format', '--config', $directory.'/pint.json', '--cache-file', $cacheFile],
         $options,
         [$directory],
     );
@@ -111,3 +111,65 @@ it('reports no changes on a second run served from the cache', function () {
         ->and(cacheSignature($this->cacheFile))
         ->toBe($signature);
 });
+
+it('rejects cache collisions before changing source or configuration', function (
+    string $target,
+    array $options,
+    bool $alias,
+    bool $invalid,
+) {
+    if ($target === 'base.json') {
+        file_put_contents($this->directory.'/base.json', '{"preset":"laravel"}');
+        file_put_contents($this->directory.'/pint.json', '{"extend":"base.json"}');
+    }
+
+    if ($invalid) {
+        file_put_contents($this->directory.'/Example.php', '<?php function broken( {');
+    }
+
+    $source = file_get_contents($this->directory.'/Example.php');
+    $configuration = file_get_contents($this->directory.'/pint.json');
+    $protected = file_get_contents($this->directory.'/'.$target);
+    $cache = $this->directory.'/'.$target;
+
+    if ($alias) {
+        symlink($cache, $this->cacheFile);
+        $cache = $this->cacheFile;
+    }
+
+    try {
+        $process = new Process([
+            'php',
+            base_path('pint'),
+            'format',
+            '--format=json',
+            '--cache-file='.$cache,
+            ...$options,
+            $this->directory,
+        ], $this->directory);
+        $process->run();
+
+        expect($process->getExitCode())
+            ->toBe(1)
+            ->and($process->getOutput().$process->getErrorOutput())
+            ->toContain('Cache file', 'conflicts with')
+            ->and(file_get_contents($this->directory.'/Example.php'))
+            ->toBe($source)
+            ->and(file_get_contents($this->directory.'/pint.json'))
+            ->toBe($configuration)
+            ->and(file_get_contents($this->directory.'/'.$target))
+            ->toBe($protected);
+    } finally {
+        @unlink($this->directory.'/base.json');
+    }
+})->with([
+    'source' => ['Example.php', [], false, false],
+    'source test' => ['Example.php', ['--test'], false, false],
+    'source bail' => ['Example.php', ['--bail'], false, false],
+    'source parse error' => ['Example.php', [], false, true],
+    'source symlink' => ['Example.php', ['--test'], true, false],
+    'discovered config' => ['pint.json', [], false, false],
+    'explicit config symlink' => ['pint.json', ['--config=pint.json', '--bail'], true, false],
+    'extended config' => ['base.json', ['--test'], false, false],
+    'extended config symlink' => ['base.json', [], true, false],
+]);

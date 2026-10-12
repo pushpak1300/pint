@@ -16,7 +16,7 @@ it('preserves prose comments and PHPDoc instead of applying the removed type-onl
 
         PHP;
 
-    $result = Process::input($input)->run('php pint -')->throw();
+    $result = Process::input($input)->run('php pint format -')->throw();
 
     expect($result->output())->toBe($input);
 });

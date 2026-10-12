@@ -6,6 +6,7 @@ use App\Actions\ElaborateSummary;
 use App\Actions\EnsurePrettierIsConfigured;
 use App\Actions\FixCode;
 use App\Factories\ConfigurationFactory;
+use App\Repositories\ConfigurationJsonRepository;
 use App\ValueObjects\ErrorsManager;
 use LaravelZero\Framework\Commands\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -20,6 +21,9 @@ class DefaultCommand extends Command
      * @var string
      */
     protected $name = 'default';
+
+    /** @var list<string> */
+    protected $aliases = ['format'];
 
     /**
      * The description of the command.
@@ -105,6 +109,20 @@ class DefaultCommand extends Command
      */
     public function handle($fixCode, $elaborateSummary, $ensurePrettierIsConfigured)
     {
+        if ($this->hasStdinInput() && ($this->option('dirty') || $this->option('diff') !== null)) {
+            abort(1, 'The [--dirty] and [--diff] options cannot be used with stdin.');
+        }
+
+        if (! resolve(ConfigurationJsonRepository::class)->sectionEnabled('format')) {
+            if ($this->hasStdinInput()) {
+                fwrite(STDOUT, stream_get_contents(STDIN));
+
+                return self::SUCCESS;
+            }
+
+            return $elaborateSummary->execute(0, []);
+        }
+
         $ensurePrettierIsConfigured->execute();
 
         if ($this->hasStdinInput()) {

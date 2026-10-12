@@ -9,14 +9,14 @@ import tarfile
 import tempfile
 import zipfile
 
-VERSION = "1.53.0"
+VERSION = "1.56.0"
 # SHA256 digests published by the official GitHub release API, not fetched at build time.
 ASSETS = {
-    "linux-x64": ("x86_64-unknown-linux-musl.tar.gz", "55e27c547fd1436fa565880f4eb5cb8cc49279170df3996e739942a2639544c9"),
-    "linux-arm64": ("aarch64-unknown-linux-musl.tar.gz", "737e67b276c12bdd2527063302ca7f65bb79592daf9d45d7e2baaf6dbcf210e3"),
-    "darwin-x64": ("x86_64-apple-darwin.tar.gz", "c20b746e0fdc0ad88e0836689561e387ea86f18fad603e584f85239f56ecab5c"),
-    "darwin-arm64": ("aarch64-apple-darwin.tar.gz", "bb228955996f04f58b980feb048e2947a300116982acc7b69621cc43bf5f9dd7"),
-    "windows-x64": ("x86_64-pc-windows-msvc.zip", "d5841d0dc305d732b439f47549f137fef02a29d3b65ed6fe1dd37c21a9b5a133"),
+    "linux-x64": ("x86_64-unknown-linux-musl.tar.gz", "d7708fd5041943236fa4802cc4a4428b59f150bcb85962d3d1c3f1a0049c2e71"),
+    "linux-arm64": ("aarch64-unknown-linux-musl.tar.gz", "df1ba9acbd914c261efa966f7cc6e35c53a2c0c5112deddd17266182a6b8a6ff"),
+    "darwin-x64": ("x86_64-apple-darwin.tar.gz", "80d823cd6cd77df360ca21153e774cf34942ec15ef87eb3dab17bf7c4387e779"),
+    "darwin-arm64": ("aarch64-apple-darwin.tar.gz", "f6131a9979d1cb1fff0a650691587180c03ffc9f22bd14bb227416673a303151"),
+    "windows-x64": ("x86_64-pc-windows-msvc.zip", "d3053551a307f190dbe44446e825cd068b3ffc3888ed2227cf88ccc32b71602f"),
 }
 
 
