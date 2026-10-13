@@ -67,7 +67,18 @@ class ConfigurationJsonRepository
             $options['empty-line-before-return'] = $rules['blank_line_before_statement'] !== false;
         }
 
-        return $this->mergeAliases($options, $this->nativeOptions($configuration['format'] ?? []), 'rules', 'format');
+        $formatter = $this->nativeOptions($configuration['format'] ?? []);
+        if (
+            array_key_exists('preset', $formatter)
+            && ! in_array($formatter['preset'], ['laravel', 'psr-12'], true)
+        ) {
+            abort(
+                1,
+                'Only Laravel and PSR-12 formatter presets are supported. Select laravel or psr12 with the top-level preset setting.',
+            );
+        }
+
+        return $this->mergeAliases($options, $formatter, 'rules', 'format');
     }
 
     /**
@@ -254,12 +265,12 @@ class ConfigurationJsonRepository
         if ($preset === 'empty') {
             abort(
                 1,
-                'The [empty] preset was removed in Pint 2.x. Select laravel, per, psr12, or symfony and configure formatter/linter settings.',
+                'The [empty] preset was removed in Pint 2.x. Select laravel or psr12 and configure formatter/linter settings.',
             );
         }
 
-        if (! in_array($preset, ['laravel', 'per', 'psr12', 'symfony'], true)) {
-            abort(1, 'Preset not found.');
+        if (! in_array($preset, ['laravel', 'psr12'], true)) {
+            abort(1, 'Preset not supported. Select laravel or psr12.');
         }
 
         return $preset;

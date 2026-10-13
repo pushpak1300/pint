@@ -19,7 +19,8 @@ function phpBlockFormatting(): PhpBlockFormatting
  */
 function phpBlockFormattingWithTrailingCommas(): PhpBlockFormatting
 {
-    return new PhpBlockFormatting(new class extends PhpFragmentFormatter {
+    return new PhpBlockFormatting(new class extends PhpFragmentFormatter
+    {
         public function format(string $code, bool $fragment = false): string
         {
             $tokens = PhpToken::tokenize($code, TOKEN_PARSE);
@@ -45,7 +46,8 @@ function phpBlockFormattingWithTrailingCommas(): PhpBlockFormatting
  */
 function phpBlockFormattingWithoutRules(): PhpBlockFormatting
 {
-    return new PhpBlockFormatting(new class extends PhpFragmentFormatter {
+    return new PhpBlockFormatting(new class extends PhpFragmentFormatter
+    {
         public function format(string $code, bool $fragment = false): string
         {
             return $code;

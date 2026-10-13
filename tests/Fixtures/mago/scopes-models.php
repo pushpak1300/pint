@@ -63,11 +63,23 @@ class Record extends ParentRecord {}
 
 class OtherRecord extends Model {}
 
+/** @method string where(string $column) */
+class NonForwardingRecord extends Model
+{
+    public function __call($method, $parameters): string
+    {
+        return 'custom';
+    }
+}
+
 /**
  * @template T of Model
  * @extends Builder<T>
  */
-class RecordBuilder extends Builder {}
+class RecordBuilder extends Builder
+{
+    protected $passthru = ['count'];
+}
 
 class CustomRecord extends ParentRecord
 {

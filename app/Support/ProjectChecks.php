@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Factories\ConfigurationFactory;
+use App\Mago\EnvOutsideConfig;
 use App\Repositories\ConfigurationJsonRepository;
 use Phar;
 use RuntimeException;
@@ -55,7 +56,11 @@ final class ProjectChecks
 
             // Curated Laravel policy, not every native rule. Finality stays opt-in.
             foreach ([
+                'no-only' => 'Error',
+                'no-debug-symbols' => 'Error',
                 'no-request-all' => 'Warning',
+                'strict-behavior' => 'Warning',
+                'use-simpler-expectation' => 'Warning',
                 'middleware-in-routes' => 'Warning',
                 'prefer-anonymous-migration' => 'Warning',
                 'prefer-array-validation-rules' => 'Error',
@@ -66,13 +71,22 @@ final class ProjectChecks
             ] as $name => $level) {
                 $rules[$name] = ['enabled' => true, 'level' => $level];
             }
+            $rules['no-debug-symbols']['exclude'] = ['tests/', 'scripts/', 'tools/'];
 
-            foreach ($configuration->linter() as $name => $options) {
+            $configured = $configuration->linter();
+            $laravelLint = EnvOutsideConfig::options(
+                isset($configured[EnvOutsideConfig::CODE])
+                    ? array_replace(['level' => 'Error'], $configured[EnvOutsideConfig::CODE])
+                    : [],
+            );
+            unset($configured[EnvOutsideConfig::CODE]);
+
+            foreach ($configured as $name => $options) {
                 if (! array_key_exists($name, $rules)) {
                     throw new RuntimeException("Unknown Mago lint rule [{$name}].");
                 }
 
-                $rules[$name] = array_replace(['level' => 'Error'], $options);
+                $rules[$name] = array_replace($rules[$name], ['enabled' => true, 'level' => 'Error'], $options);
             }
 
             $analyzer = $configuration->analyzer();
@@ -108,7 +122,7 @@ final class ProjectChecks
             $settings = [
                 'php-version' => $versions['php'],
                 'source' => ['paths' => $files, 'includes' => $includes],
-                'linter' => ['integrations' => ['laravel'], 'rules' => $rules],
+                'linter' => ['integrations' => ['laravel', 'pest'], 'rules' => $rules],
                 'analyzer' => array_replace([
                     'find-unused-definitions' => false,
                     'find-unused-expressions' => false,
@@ -144,6 +158,28 @@ final class ProjectChecks
 
             file_put_contents($this->directory.'/mago.json', json_encode($settings, JSON_THROW_ON_ERROR));
             $this->process(['config']);
+
+            // Lint uses only its read-only rule host, never analyzer or cleanup workers.
+            $lint = $settings;
+            unset($lint['extension-hosts']);
+            if ($laravelLint['enabled']) {
+                $path = $this->directory.'/laravel-lint.json';
+                file_put_contents($path, json_encode(['root' => $root, ...$laravelLint], JSON_THROW_ON_ERROR));
+                $lint['extension-hosts']['pint-laravel-lint'] = [
+                    'command' => [
+                        PHP_BINARY,
+                        '-r',
+                        'if ($argv[2] !== "") { Phar::loadPhar($argv[2]); } require $argv[1]; App\\Mago\\EnvOutsideConfig::work($argv[3]);',
+                        $phar !== ''
+                            ? 'phar://'.$phar.'/vendor/autoload.php'
+                            : dirname(__DIR__, 2).'/vendor/autoload.php',
+                        $phar,
+                        $path,
+                    ],
+                    'workers' => 1,
+                ];
+            }
+            file_put_contents($this->directory.'/lint.json', json_encode($lint, JSON_THROW_ON_ERROR));
 
             // Scan unselected application models too, but keep fixes restricted to selected files.
             $settings['source'] = [
@@ -233,12 +269,16 @@ final class ProjectChecks
                 '--workspace',
                 $this->root,
                 '--config',
-                $this->directory.($arguments[0] === 'analyze' ? '/analyze.json' : '/mago.json'),
+                $this->directory.match ($arguments[0]) {
+                    'analyze' => '/analyze.json',
+                    'lint' => '/lint.json',
+                    default => '/mago.json',
+                },
                 '--threads',
                 (string) $this->threads,
                 '--colors',
                 'never',
-                ...($arguments[0] === 'analyze' ? [] : ['--no-extensions']),
+                ...(in_array($arguments[0], ['analyze', 'lint'], true) ? [] : ['--no-extensions']),
                 ...$arguments,
             ],
             $this->root,

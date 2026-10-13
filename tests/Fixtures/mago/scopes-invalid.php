@@ -34,3 +34,41 @@ function wrongRelationElement(HasMany $relation): ?OtherRecord
 {
     return $relation->tagged('tag')->get()->first();
 }
+
+function nativeArguments(): void
+{
+    Record::where(column: 1);
+    Record::where(column: 'label', typo: true);
+    Record::create('not an array');
+}
+
+function wrongNativeElement(): OtherRecord
+{
+    return Record::findOrFail(9);
+}
+
+function wrongMultipleFinder(): Record
+{
+    return Record::findOrFail([1, 4]);
+}
+
+function wrongPassthrough(): Record
+{
+    return Record::exists();
+}
+
+/** @return Builder<Record> */
+function wrongConditional(bool $enabled): Builder
+{
+    return Record::query()->when($enabled, fn (): string => 'not a builder');
+}
+
+function wrongEach(): void
+{
+    Record::each(function (OtherRecord $record): void {});
+}
+
+function wrongOverride(\ScopeFixtures\NonForwardingRecord $record): Record
+{
+    return $record->where('active');
+}

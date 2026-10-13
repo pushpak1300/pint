@@ -142,14 +142,21 @@ it('properly extend the base config file', function () {
 });
 
 it('lets the CLI preset override the extended configuration preset', function () {
-    $repository = new ConfigurationJsonRepository(dirname(__DIR__, 2).'/Fixtures/extend/pint.json', 'symfony');
+    $repository = new ConfigurationJsonRepository(dirname(__DIR__, 2).'/Fixtures/extend/pint.json', 'psr12');
 
-    expect($repository->preset())->toBe('symfony');
+    expect($repository->preset())->toBe('psr12');
 });
 
 it('rejects the removed empty preset', function () {
     new ConfigurationJsonRepository(null, 'empty')->preset();
 })->throws(ConsoleException::class, 'preset was removed');
+
+it('rejects removed presets from the CLI and configuration', function (string $preset) {
+    expect(fn () => new ConfigurationJsonRepository(null, $preset)->preset())
+        ->toThrow(ConsoleException::class, 'Select laravel or psr12');
+    expect(fn () => configurationFixture(['preset' => $preset])->preset())
+        ->toThrow(ConsoleException::class, 'Select laravel or psr12');
+})->with(['per', 'symfony']);
 
 it('rejects invalid configuration section types', function (string $json, string $message) {
     $repository = new class('data://text/plain,'.rawurlencode($json), null) extends ConfigurationJsonRepository

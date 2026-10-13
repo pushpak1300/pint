@@ -113,7 +113,8 @@ it('formats an island the same way twice', function () {
 });
 
 it('delegates both formatting modes to Mago fragments', function (bool $fragment) {
-    $mago = new class {
+    $mago = new class
+    {
         public array $calls = [];
 
         public function formatFragment(string $code): string
@@ -133,7 +134,8 @@ it('delegates both formatting modes to Mago fragments', function (bool $fragment
 })->with([false, true]);
 
 it('does not swallow real formatter failures', function () {
-    app()->instance(Mago::class, new class {
+    app()->instance(Mago::class, new class
+    {
         public function formatFragment(string $code): string
         {
             throw new RuntimeException('Mago failed');

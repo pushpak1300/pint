@@ -72,6 +72,11 @@ jobs:
       - name: Stage pinned native Mago binaries
         run: python scripts/stage-mago.py
 
+      - name: Format the Laravel skeleton with Pint v2
+        # The upstream skeleton targets Pint v1. Format it first so the checks
+        # below verify v2 idempotence without requiring identical v1 output.
+        run: ./pint format skeleton
+
       - name: Execute lint tests with Laravel preset
         run: ./pint format --test
 

@@ -9,7 +9,8 @@ use App\Support\Prettier;
  */
 function fakePrettier(Closure $handler): Prettier
 {
-    return new class('', $handler) extends Prettier {
+    return new class('', $handler) extends Prettier
+    {
         public function __construct(
             string $projectRoot,
             private Closure $handler,

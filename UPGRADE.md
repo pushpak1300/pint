@@ -39,8 +39,10 @@ exit 1; changed files alone do not. Advisory warnings are nonblocking unless
 resulting files again rather than treating a successful write as a clean result.
 
 Quality checks report by file, line, stage, rule, explanation, and actual native
-fixability. `--format=json` returns `{result, changed, issues}`. Formatting-only
-reports keep their previous shapes. Files are sorted for stable reports.
+fixability. `--format=json` returns `{result, changed, issues}`; `--format=agent`
+returns the same data as compact single-line JSON. Use `-v` for remediation help
+in text output. Formatting-only reports keep their previous shapes. Files are
+sorted for stable reports. No agent hooks or autonomous repair loop are installed.
 
 All project-owned PHP is selected by default, including tests, routes, config,
 and database files. Vendor and generated files are never quality-check write
@@ -69,11 +71,15 @@ Keep `pint.json`, `preset`, `extend`, `in`, `exclude`, `notName`, `notPath`, and
 ```
 
 Each section accepts `enabled: false`. `format` accepts native formatter
-options; `lint.rules` accepts native rule option objects; `analyze` and `guard`
-accept native analyzer/guard settings. Pint owns file selection, severity exit
-policy, and baselines: use top-level exclusions, `--strict`, and `baseline`, not
-their native section equivalents. Explicitly configured lint rules default to
-error severity unless a `level` is supplied.
+options, with presets limited to Laravel and PSR-12; `lint.rules` accepts native
+rule option objects and the bundled `pint/env-outside-config` rule; `analyze`
+and `guard` accept native analyzer/guard settings. Pint owns file selection,
+severity exit policy, and baselines: use top-level exclusions, `--strict`, and
+`baseline`, not their native section equivalents. A rule's `exclude` option
+exempts paths from that rule only.
+Explicitly configured lint rules default to error severity unless a `level`
+is supplied. Changing a rule's level retains its default path exclusions;
+supplying `exclude` replaces them, and `exclude: []` removes them.
 
 Legacy `formatter`, `linter`, and top-level `rules` remain aliases for `format`,
 `lint`, and `refactor.rules`. Conflicting old/new values are rejected, not silently
@@ -83,9 +89,68 @@ chosen. Unsupported legacy rules/options still produce errors.
 
 Native Laravel lint checks cover request `all()` use, middleware placement,
 anonymous migrations, array validation rules, casts methods, dedicated HTTP
-assertions, the fake helper, and view arrays. Array validation rules are mandatory;
-the other defaults are advisory. Forced final controllers and heuristic implicit
-model-query rewriting stay opt-in. No custom copies of these native rules ship.
+assertions, the fake helper, and view arrays. Pint also enables native Pest and
+PHP correctness checks. The following policy applies without extra configuration:
+
+| Rule | Default | Purpose / limits |
+| --- | --- | --- |
+| `no-only` | Error | Prevent focused Pest tests from silently narrowing the suite. A native fix removes `->only()`. |
+| `no-debug-symbols` | Error | Report debug function calls outside `tests/`, `scripts/`, and `tools/`. Method calls are not checked; `print_r` / `var_export` with a second argument are allowed. No automatic deletion. |
+| `prefer-array-validation-rules` | Error | Prefer Laravel's array validation-rule syntax. Native fixes are available. |
+| `no-request-all` | Warning | Flag common syntactic `all()` calls, not arbitrary unvalidated data flow. `only()` restricts fields but does not validate them; there is no automatic replacement. |
+| `strict-behavior` | Warning | Prefer strict membership/search/decode operations. Adding strictness can change behavior. |
+| `use-simpler-expectation` | Warning | Prefer direct Pest expectations to intermediate boolean checks where native patterns support it. This is not complete Pest analysis. |
+| `pint/env-outside-config` | Warning | Read application settings through `config()` outside root configuration files. See the scope below. No automatic fix. |
+
+Other Laravel conventions remain advisory. Forced final controllers, blanket
+strict types, loose-comparison refactors, and heuristic implicit model-query
+rewriting stay opt-in. Pint does not impose service/repository layers or ban
+facades or raw queries. No custom copies of native Mago rules ship.
+
+`strict-behavior` fixes can change results such as `in_array('1', [1])` by adding
+strict comparison. The existing `fix` / `lint --fix` permission boundary includes
+these enabled potentially unsafe fixes. Read-only `lint` never applies them;
+review explicit fixes and run tests. Disable the rule if coercion is intentional.
+
+#### Environment reads outside configuration
+
+`pint/env-outside-config` uses Mago's parsed syntax and resolved names, not a text
+search. It checks global `env()`, `\env()`, imported aliases, and unqualified
+namespaced calls that can fall back to Laravel's helper. It ignores method calls,
+explicitly qualified non-global helpers, and functions declared in the same file.
+It cannot establish namespace shadowing from a helper declared in another file
+or resolve dynamic function calls. This is an advisory configuration-cache check,
+not a security guarantee or runtime analysis.
+
+Root `config/` files, including nested configuration directories, are always
+allowed. `app/config/` is not the application's root configuration directory.
+By default, `bootstrap/`, `tests/`, `scripts/`, and `tools/` are exempt because
+environment access can be intentional there. Override the rule in `pint.json`:
+
+```json
+{
+    "lint": {
+        "rules": {
+            "pint/env-outside-config": {
+                "level": "warning",
+                "exclude": ["bootstrap/", "tests/", "scripts/", "tools/", "app/Legacy/**"]
+            }
+        }
+    }
+}
+```
+
+Only `enabled`, `level`, and `exclude` are accepted for this bundled rule.
+Exclusions accept project-relative path prefixes and globs; they replace the
+default exceptions, but never forbid environment reads in root `config/`.
+Unknown options, invalid severities, and malformed patterns fail before fixes.
+Formatting and analysis do not run this lint worker. Lint runs it alongside
+native rules in one Mago pass, without starting the analyzer or cleanup workers.
+
+For example, define the environment-backed setting in `config/services.php`,
+then read `config('services.billing.endpoint')` in application code instead of
+`env('BILLING_ENDPOINT')`. Pint cannot choose the configuration key and default
+for you, so even explicit fix commands leave these calls unchanged.
 
 Balanced analysis disables unused-definition/expression reporting to avoid
 misclassifying Laravel entry points; `analyze.strictness: strict` additionally
@@ -146,6 +211,32 @@ fluent builder/relation types, including typed custom builders. Protected
 visibility/static checks; the extension does not suppress those diagnostics.
 Scalar-returning scopes keep their declared return type rather than forcing a
 builder result. Unresolved generic scope contracts are not expanded.
+
+**Eloquent query calls:** model calls such as `User::where()`, `create()`,
+`findOrFail()`, and `each()` use installed Builder signatures, including argument
+validation and model/collection element types. Scalar and array finder inputs
+keep different return types. Typed `newEloquentBuilder()` overrides and literal
+query passthrough lists are respected. Unsupported templates, custom dispatch,
+and builder attributes/static properties retain native inference rather than
+inventing a return type.
+
+**Conditional chains:** `when()` and `unless()` keep the receiver type when their
+callbacks return only `void` or `null`, matching Laravel's null-coalescing return.
+Other callback results and higher-order calls keep native inference.
+
+**Framework helpers:** standard `app()`, `auth()`, and `view()` calls refine to
+their default concrete framework classes. Application helper overrides and
+detected container rebinding calls retain native contracts. This assumes Laravel's
+standard services, not arbitrary package/runtime container mutations. Auth guard
+selection and the configured user model remain incomplete; Pint does not guess
+an environment-dependent model class or silently treat every guard as stateful.
+
+**HTTP client:** standard factory/facade requests return synchronous responses;
+fluent `async()` calls preserve promises and unknown boolean modes preserve both
+possibilities. Native argument validation remains active. Custom factory roots
+and receiver mutations such as `$request->async();` without using the returned
+request still need native engine support; return-type providers cannot implement
+general `@phpstan-self-out` flow updates.
 
 **Configuration:** literal values in root `config/*.php` files refine `config()`,
 `Config::get()`, and config repository `get()` calls, including dot keys, defaults,
@@ -212,14 +303,19 @@ environment variables, and does not load arbitrary Mago extensions.
 
 ## Presets and cleanup
 
+Only `laravel` (the default) and `psr12` are supported. Select them with the
+top-level `preset` setting or `--preset`.
+
 - `laravel`: Mago's Laravel style plus available options matching Pint 1.x.
   Safe cleanup enables short arrays, unused/redundant import removal, and
   shortening/importing fully qualified class-like references in PHP code.
-- `per`: Mago's PER-CS default with unused/redundant import removal.
 - `psr12`: Mago's PSR-12 preset with unused/redundant import removal.
-- `symfony`: an approximation using PSR-12, single quotes, tight concatenation,
-  blank lines before returns, short arrays, and unused/redundant import removal.
-- `empty` has been removed. Select another preset and explicit settings.
+
+`per`, `symfony`, and `empty` have been removed. Select `laravel` or `psr12`
+explicitly; removed presets are rejected, not silently mapped to another style.
+Native `format.preset` overrides, including the legacy `formatter` alias, accept
+only `laravel` or `psr-12`; Mago's `default` (PER) preset is not available through
+Pint.
 
 Mago can wrap lines at its print width. For whole PHP files, the Laravel preset
 finishes single-line anonymous-class signatures with a next-line opening brace,

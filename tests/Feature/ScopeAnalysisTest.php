@@ -36,12 +36,12 @@ it('checks inherited Eloquent scopes and keeps native fluent collection types', 
             ->map(fn ($issues) => $issues->pluck('line')->unique()->values()->all())
             ->all();
         expect($lines)->toBe([
-            'invalid-argument' => [13, 14, 16, 18, 20],
+            'invalid-argument' => [13, 14, 16, 18, 20, 40, 42, 68],
             'too-few-arguments' => [15],
-            'invalid-named-argument' => [17],
+            'invalid-named-argument' => [17, 41],
             'invalid-pass-by-reference' => [19],
             'non-documented-method' => [21, 22, 23],
-            'invalid-return-statement' => [29, 35],
+            'invalid-return-statement' => [29, 35, 47, 52, 57, 63, 73],
         ]);
     } finally {
         new Filesystem()->remove($project);

@@ -81,6 +81,7 @@ class QualityCommand extends DefaultCommand
                 );
             }
             $configuration = resolve(ConfigurationJsonRepository::class);
+            $configuration->preset();
             $files = array_values(array_filter(ConfigurationResolverFactory::files($this->input), function ($path) use (
                 $root,
             ) {
@@ -237,10 +238,10 @@ class QualityCommand extends DefaultCommand
                 && $issue['severity'] === 'warning'
             ),
         );
-        if ($format === 'json') {
+        if (in_array($format, ['json', 'agent'], true)) {
             $this->line(json_encode(
                 ['result' => $failed ? 'fail' : 'pass', 'changed' => $changed, 'issues' => $issues],
-                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+                ($format === 'json' ? JSON_PRETTY_PRINT : 0) | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
             ));
         } else {
             foreach ($issues as $issue) {
@@ -255,6 +256,9 @@ class QualityCommand extends DefaultCommand
                 ));
                 if ($this->output->isVerbose() && ! empty($issue['diff'])) {
                     $this->output->write($issue['diff']);
+                }
+                if ($this->output->isVerbose() && ! empty($issue['help'])) {
+                    $this->line('  '.$issue['help']);
                 }
             }
             $this->line(sprintf(

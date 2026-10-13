@@ -20,6 +20,8 @@ final class Laravel implements CodebaseScanHook, Plugin
 
     private ConfigTypes $configs;
 
+    private FrameworkHelpers $helpers;
+
     public static function work(): void
     {
         new Worker(new Extension(
@@ -35,18 +37,23 @@ final class Laravel implements CodebaseScanHook, Plugin
         return new PluginDefinition(
             'pint/laravel',
             'Laravel',
-            'Infer Eloquent properties, local scopes, and static configuration types.',
+            'Infer Laravel model, query, framework helper, and configuration types.',
         );
     }
 
     public function register(PluginRegistry $registry): void
     {
         $this->configs = new ConfigTypes;
+        $this->helpers = new FrameworkHelpers;
         $registry->registerCodebaseScanHook($this);
         $registry->registerPropertyTypeProvider(new ModelProperties($this));
         $registry->registerMethodReturnTypeProvider(new ScopeMethods);
+        $registry->registerMethodReturnTypeProvider(new EloquentMethods);
         $registry->registerFunctionReturnTypeProvider($this->configs);
+        $registry->registerFunctionReturnTypeProvider($this->helpers);
         $registry->registerMethodReturnTypeProvider(new ConfigMethods($this->configs));
+        $registry->registerMethodReturnTypeProvider(new HttpMethods);
+        $registry->registerMethodReturnTypeProvider(new ConditionableMethods);
 
         // Call providers use only invocation types and the frozen codebase/config scan.
         $registry->enableProviderMemoization();
@@ -60,6 +67,7 @@ final class Laravel implements CodebaseScanHook, Plugin
     public function scan(CodebaseScanContext $context): void
     {
         $this->configs->scan($context);
+        $this->helpers->scan($context);
         if ($context->firstBatch) {
             $this->casts = [];
         }

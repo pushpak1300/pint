@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Mago\Cleanup;
+use App\Mago\EnvOutsideConfig;
 use App\Mago\Layout;
 use App\Repositories\ConfigurationJsonRepository;
 use CompileError;
@@ -92,6 +93,10 @@ final class Mago
             throw new RuntimeException('Use Pint exclude/notPath/notName settings, not formatter.excludes.');
         }
 
+        $linter = $configuration->linter();
+        EnvOutsideConfig::options($linter[EnvOutsideConfig::CODE] ?? []);
+        unset($linter[EnvOutsideConfig::CODE]);
+
         $this->settings = [
             'php-version' => $configuration->phpVersion(),
             'source' => ['paths' => [], 'includes' => [], 'excludes' => []],
@@ -102,8 +107,8 @@ final class Mago
                     : array_replace_recursive(
                         $preset['linter'],
                         $stage === 'style'
-                            ? array_intersect_key($configuration->linter(), $preset['linter'])
-                            : $configuration->linter(),
+                            ? array_intersect_key($linter, $preset['linter'])
+                            : $linter,
                     ),
             ],
         ];
