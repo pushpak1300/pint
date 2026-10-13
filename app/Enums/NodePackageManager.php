@@ -17,8 +17,7 @@ enum NodePackageManager: string
     public static function detect(string $projectRoot): self
     {
         return match (true) {
-            File::exists($projectRoot.'/bun.lock'),
-            File::exists($projectRoot.'/bun.lockb') => self::Bun,
+            File::exists($projectRoot.'/bun.lock'), File::exists($projectRoot.'/bun.lockb') => self::Bun,
             File::exists($projectRoot.'/pnpm-lock.yaml') => self::Pnpm,
             File::exists($projectRoot.'/yarn.lock') => self::Yarn,
             default => self::Npm,

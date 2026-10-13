@@ -3,12 +3,11 @@
 namespace App\Output;
 
 use App\Project;
-use PhpCsFixer\Console\Report\FixReport\ReporterInterface;
-use PhpCsFixer\Console\Report\FixReport\ReportSummary;
-use PhpCsFixer\Error\Error;
-use PhpCsFixer\Error\ErrorsManager;
+use App\ValueObjects\Error;
+use App\ValueObjects\ErrorsManager;
+use App\ValueObjects\ReportSummary;
 
-final class AgentReporter implements ReporterInterface
+final class AgentReporter
 {
     /**
      * Creates a new Agent Reporter instance.
@@ -63,7 +62,7 @@ final class AgentReporter implements ReporterInterface
             foreach ($errors as $error) {
                 $output['errors'][] = [
                     'path' => str_replace($projectPath, '', $error->getFilePath()),
-                    'message' => $error->getSource()->getMessage(),
+                    'message' => $error->getSource()?->getMessage() ?? 'Unknown error',
                 ];
             }
         }

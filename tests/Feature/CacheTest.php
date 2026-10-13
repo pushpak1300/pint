@@ -1,6 +1,5 @@
 <?php
 
-use App\Fixers\PrettierCacheFingerprint;
 use Symfony\Component\Process\Process;
 
 /**
@@ -11,7 +10,7 @@ use Symfony\Component\Process\Process;
 function runPintWithCache(string $directory, string $cacheFile, array $options = []): int
 {
     $command = array_merge(
-        ['php', 'pint', '--config', $directory.'/pint.json', '--cache-file', $cacheFile],
+        ['php', 'pint', 'format', '--config', $directory.'/pint.json', '--cache-file', $cacheFile],
         $options,
         [$directory],
     );
@@ -40,8 +39,14 @@ beforeEach(function () {
     mkdir($this->directory.'/resources/views', 0777, true);
 
     file_put_contents($this->directory.'/pint.json', '{"preset":"laravel"}'."\n");
-    file_put_contents($this->directory.'/resources/views/welcome.blade.php', "<div   class=\"p-4 flex\"><x-foo    :bar=\"\$baz\"/></div>\n");
-    file_put_contents($this->directory.'/Example.php', "<?php\n\nclass Example\n{\n    public function handle()\n    {\n        return array(1, 2);\n    }\n}\n");
+    file_put_contents(
+        $this->directory.'/resources/views/welcome.blade.php',
+        "<div   class=\"p-4 flex\"><x-foo    :bar=\"\$baz\"/></div>\n",
+    );
+    file_put_contents(
+        $this->directory.'/Example.php',
+        "<?php\n\nclass Example\n{\n    public function handle()\n    {\n        return array(1, 2);\n    }\n}\n",
+    );
 });
 
 afterEach(function () {
@@ -61,28 +66,39 @@ it('uses the cache when blade formatting is active', function () {
 
     $cached = array_map('basename', array_keys($signature['hashes']));
 
-    expect($signature['rules'])->toHaveKey('Pint/laravel_blade')
-        ->and($cached)->toContain('welcome.blade.php')
-        ->and($cached)->toContain('Example.php');
+    expect($signature['signature'])
+        ->toHaveKeys(['pint', 'mago', 'blade', 'prettier'])
+        ->and($signature['signature']['blade'])
+        ->toBeTrue()
+        ->and($signature['signature']['mago'])
+        ->toMatch('/^[a-f0-9]{64}$/')
+        ->and($cached)
+        ->toContain('welcome.blade.php')
+        ->and($cached)
+        ->toContain('Example.php');
+
+    foreach ($signature['hashes'] as $path => $hash) {
+        expect($hash)->toBe(hash_file('sha256', $path));
+    }
 });
 
 it('carries the prettier fingerprints in the cache signature', function () {
     expect(runPintWithCache($this->directory, $this->cacheFile, ['--blade']))->toBe(0);
 
-    $rules = cacheSignature($this->cacheFile)['rules'];
-    $fingerprints = $rules[(new PrettierCacheFingerprint)->getName()]['fingerprints'] ?? null;
+    $fingerprints = cacheSignature($this->cacheFile)['signature']['prettier'];
 
-    expect($fingerprints)->toHaveKey('Pint/laravel_blade')
-        ->and($fingerprints['Pint/laravel_blade'])->toMatch('/^[a-f0-9]{32}$/');
+    expect($fingerprints)
+        ->toHaveKey('Pint/laravel_blade')
+        ->and($fingerprints['Pint/laravel_blade'])
+        ->toMatch('/^[a-f0-9]{32}$/');
 });
 
 it('does not carry prettier fingerprints when blade formatting is inactive', function () {
     expect(runPintWithCache($this->directory, $this->cacheFile))->toBe(0);
 
-    $rules = cacheSignature($this->cacheFile)['rules'];
+    $signature = cacheSignature($this->cacheFile)['signature'];
 
-    expect($rules)->not->toHaveKey((new PrettierCacheFingerprint)->getName())
-        ->and($rules)->not->toHaveKey('Pint/laravel_blade');
+    expect($signature['prettier'])->toBe([])->and($signature['blade'])->toBeFalse();
 });
 
 it('reports no changes on a second run served from the cache', function () {
@@ -90,6 +106,70 @@ it('reports no changes on a second run served from the cache', function () {
 
     $signature = cacheSignature($this->cacheFile);
 
-    expect(runPintWithCache($this->directory, $this->cacheFile, ['--blade', '--test']))->toBe(0)
-        ->and(cacheSignature($this->cacheFile))->toBe($signature);
+    expect(runPintWithCache($this->directory, $this->cacheFile, ['--blade', '--test']))
+        ->toBe(0)
+        ->and(cacheSignature($this->cacheFile))
+        ->toBe($signature);
 });
+
+it('rejects cache collisions before changing source or configuration', function (
+    string $target,
+    array $options,
+    bool $alias,
+    bool $invalid,
+) {
+    if ($target === 'base.json') {
+        file_put_contents($this->directory.'/base.json', '{"preset":"laravel"}');
+        file_put_contents($this->directory.'/pint.json', '{"extend":"base.json"}');
+    }
+
+    if ($invalid) {
+        file_put_contents($this->directory.'/Example.php', '<?php function broken( {');
+    }
+
+    $source = file_get_contents($this->directory.'/Example.php');
+    $configuration = file_get_contents($this->directory.'/pint.json');
+    $protected = file_get_contents($this->directory.'/'.$target);
+    $cache = $this->directory.'/'.$target;
+
+    if ($alias) {
+        symlink($cache, $this->cacheFile);
+        $cache = $this->cacheFile;
+    }
+
+    try {
+        $process = new Process([
+            'php',
+            base_path('pint'),
+            'format',
+            '--format=json',
+            '--cache-file='.$cache,
+            ...$options,
+            $this->directory,
+        ], $this->directory);
+        $process->run();
+
+        expect($process->getExitCode())
+            ->toBe(1)
+            ->and($process->getOutput().$process->getErrorOutput())
+            ->toContain('Cache file', 'conflicts with')
+            ->and(file_get_contents($this->directory.'/Example.php'))
+            ->toBe($source)
+            ->and(file_get_contents($this->directory.'/pint.json'))
+            ->toBe($configuration)
+            ->and(file_get_contents($this->directory.'/'.$target))
+            ->toBe($protected);
+    } finally {
+        @unlink($this->directory.'/base.json');
+    }
+})->with([
+    'source' => ['Example.php', [], false, false],
+    'source test' => ['Example.php', ['--test'], false, false],
+    'source bail' => ['Example.php', ['--bail'], false, false],
+    'source parse error' => ['Example.php', [], false, true],
+    'source symlink' => ['Example.php', ['--test'], true, false],
+    'discovered config' => ['pint.json', [], false, false],
+    'explicit config symlink' => ['pint.json', ['--config=pint.json', '--bail'], true, false],
+    'extended config' => ['base.json', ['--test'], false, false],
+    'extended config symlink' => ['base.json', [], true, false],
+]);

@@ -3,7 +3,7 @@
 namespace App\Output;
 
 use App\Output\Concerns\InteractsWithSymbols;
-use PhpCsFixer\Runner\Event\FileProcessed;
+use App\ValueObjects\FileProcessed;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Terminal;
@@ -40,7 +40,7 @@ class ProgressOutput
         protected $input,
         protected $output,
     ) {
-        $this->symbolsPerLine = (new Terminal)->getWidth() - 4;
+        $this->symbolsPerLine = new Terminal()->getWidth() - 4;
     }
 
     /**
@@ -73,7 +73,7 @@ class ProgressOutput
     {
         $symbolsOnCurrentLine = $this->processed % $this->symbolsPerLine;
 
-        if ($symbolsOnCurrentLine >= (new Terminal)->getWidth() - 4) {
+        if ($symbolsOnCurrentLine >= (new Terminal()->getWidth() - 4)) {
             $symbolsOnCurrentLine = 0;
         }
 

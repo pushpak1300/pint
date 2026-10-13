@@ -71,7 +71,7 @@ class CollapseShortSlots implements PrettierPostFormatter
             return null;
         }
 
-        if ($index + 2 >= $lineCount) {
+        if (($index + 2) >= $lineCount) {
             return null;
         }
 

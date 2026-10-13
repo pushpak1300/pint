@@ -15,11 +15,9 @@ it('determines dirty files', function () {
 
     $this->swap(PathsRepository::class, $paths);
 
-    [$statusCode, $output] = run('default', ['--dirty' => true]);
+    [$statusCode, $output] = run('default', ['--dirty' => true, '--no-config' => true]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── Laravel', ' 1 file');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── Laravel', ' 1 file');
 });
 
 it('ignores the path argument', function () {
@@ -36,12 +34,11 @@ it('ignores the path argument', function () {
 
     [$statusCode, $output] = run('default', [
         '--dirty' => true,
+        '--no-config' => true,
         'path' => base_path(),
     ]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── Laravel', ' 1 file');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── Laravel', ' 1 file');
 });
 
 it('fails when git is not available', function () {
@@ -60,10 +57,7 @@ it('fails when git is not available', function () {
 it('does not abort when there are no dirty files', function () {
     $paths = Mockery::mock(PathsRepository::class);
 
-    $paths
-        ->shouldReceive('dirty')
-        ->once()
-        ->andReturn([]);
+    $paths->shouldReceive('dirty')->once()->andReturn([]);
 
     $this->swap(PathsRepository::class, $paths);
 
@@ -71,7 +65,5 @@ it('does not abort when there are no dirty files', function () {
         '--dirty' => true,
     ]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── Laravel', ' 0 files');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── Laravel', ' 0 files');
 });

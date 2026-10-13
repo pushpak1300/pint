@@ -32,7 +32,7 @@ class NotOperatorSpacing implements PrettierPostFormatter
         while ($offset < $length) {
             $char = $content[$offset];
 
-            if ($char === '<' && $offset + 1 < $length && $content[$offset + 1] === '?') {
+            if ($char === '<' && ($offset + 1) < $length && $content[$offset + 1] === '?') {
                 $end = strpos($content, '?>', $offset + 2);
                 $offset = $end === false ? $length : $end + 2;
 
@@ -60,7 +60,7 @@ class NotOperatorSpacing implements PrettierPostFormatter
                 continue;
             }
 
-            if ($char === '<' && $offset + 1 < $length && $this->startsTag($content[$offset + 1])) {
+            if ($char === '<' && ($offset + 1) < $length && $this->startsTag($content[$offset + 1])) {
                 $offset = $this->handleTag($content, $length, $offset, $inserts);
 
                 continue;
@@ -311,7 +311,7 @@ class NotOperatorSpacing implements PrettierPostFormatter
                 continue;
             }
 
-            $next = $offset + 1 < $end ? $content[$offset + 1] : '';
+            $next = ($offset + 1) < $end ? $content[$offset + 1] : '';
 
             // "!=" is a comparison, "!!" double negation, and a space is already correct.
             if ($next === '=' || $next === '!' || $next === '' || $this->isSpace($next)) {

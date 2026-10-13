@@ -1,5 +1,11 @@
 {
-    "rules": {
-        "no_unused_imports": false
+    "formatter": {
+        "print-width": 100
+    },
+    "php-version": "8.2",
+    "linter": {
+        "rules": {
+            "no-redundant-use": { "enabled": false }
+        }
     }
 }

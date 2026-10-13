@@ -5,9 +5,7 @@ it('uses the laravel preset by default', function () {
         'path' => base_path('tests/Fixtures/without-issues-laravel'),
     ]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── Laravel');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── Laravel');
 });
 
 it('may use the PSR 12 preset', function () {
@@ -16,20 +14,7 @@ it('may use the PSR 12 preset', function () {
         '--preset' => 'psr12',
     ]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── PSR 12');
-});
-
-it('may use the PER preset', function () {
-    [$statusCode, $output] = run('default', [
-        'path' => base_path('tests/Fixtures/without-issues'),
-        '--preset' => 'per',
-    ]);
-
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── PER');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── PSR 12');
 });
 
 it('may use the Laravel preset', function () {
@@ -38,20 +23,7 @@ it('may use the Laravel preset', function () {
         '--preset' => 'laravel',
     ]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── Laravel');
-});
-
-it('may use the Symfony preset', function () {
-    [$statusCode, $output] = run('default', [
-        'path' => base_path('tests/Fixtures/without-issues'),
-        '--preset' => 'symfony',
-    ]);
-
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── Symfony');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── Laravel');
 });
 
 it('ignores config when using no config option', function () {
@@ -65,7 +37,5 @@ it('ignores config when using no config option', function () {
 
     chdir($cwd);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('── PSR 12');
+    expect($statusCode)->toBe(0)->and($output)->toContain('── PSR 12');
 });

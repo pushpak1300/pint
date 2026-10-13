@@ -3,15 +3,23 @@
     "directories": [
         "app",
         "bootstrap",
-        "config",
-        "overrides",
-        "resources"
+        "config"
+    ],
+    "directories-bin": [
+        "resources/mago"
     ],
     "finder": [
+        {
+            "in": "resources",
+            "notPath": [
+                "#^mago/#"
+            ]
+        },
         {
             "in": "vendor",
             "notPath": [
                 "#^brianium/paratest/#",
+                "#^carthage-software/mago/(?!composer/src/|LICENSE)#",
                 "#^doctrine/deprecations/#",
                 "#^fruitcake/php-cors/#",
                 "#^hamcrest/hamcrest-php/#",
@@ -23,7 +31,6 @@
                 "#^jolicode/jolinotif/#",
                 "#^larastan/larastan/#",
                 "#^laravel/serializable-closure/#",
-                "#^nikic/php-parser/#",
                 "#^pestphp/pest/#",
                 "#^pestphp/pest-plugin-mutate/#",
                 "#^pestphp/pest-plugin-profanity/#",
@@ -89,6 +96,7 @@
         "vendor/pestphp/pest/src/Plugin.php"
     ],
     "blacklist": [
+        "resources/mago/.gitignore",
         "resources/js/worker.cjs",
         "resources/js/version-probe.cjs",
         "resources/prettier/prettierrc.json",

@@ -12,13 +12,17 @@ it('outputs checkstyle format', function () {
         '--format' => 'checkstyle',
     ]);
 
-    expect($statusCode)->toBe(1)
+    expect($statusCode)
+        ->toBe(1)
         ->and($output)
         ->toContain('<?xml version="1.0" encoding="UTF-8"?>')
         ->toContain('<checkstyle')
         ->toContain('</checkstyle>')
         ->not->toContain(sprintf('⨯ %s', implode(DIRECTORY_SEPARATOR, [
-            'tests', 'Fixtures', 'with-fixable-issues', 'file.php',
+            'tests',
+            'Fixtures',
+            'with-fixable-issues',
+            'file.php',
         ])));
 });
 
@@ -29,12 +33,16 @@ it('outputs json format', function () {
         '--format' => 'json',
     ]);
 
-    expect($statusCode)->toBe(1)
+    expect($statusCode)
+        ->toBe(1)
         ->and($output)
         ->toBeJson()
         ->toContain('appliedFixers')
         ->not->toContain(sprintf('⨯ %s', implode(DIRECTORY_SEPARATOR, [
-            'tests', 'Fixtures', 'with-fixable-issues', 'file.php',
+            'tests',
+            'Fixtures',
+            'with-fixable-issues',
+            'file.php',
         ])));
 });
 
@@ -45,11 +53,15 @@ it('outputs xml format', function () {
         '--format' => 'xml',
     ]);
 
-    expect($statusCode)->toBe(1)
+    expect($statusCode)
+        ->toBe(1)
         ->and($output)
         ->toContain('<?xml version="1.0" encoding="UTF-8"?>')
         ->not->toContain(sprintf('⨯ %s', implode(DIRECTORY_SEPARATOR, [
-            'tests', 'Fixtures', 'with-fixable-issues', 'file.php',
+            'tests',
+            'Fixtures',
+            'with-fixable-issues',
+            'file.php',
         ])));
 });
 
@@ -60,12 +72,16 @@ it('outputs junit format', function () {
         '--format' => 'junit',
     ]);
 
-    expect($statusCode)->toBe(1)
+    expect($statusCode)
+        ->toBe(1)
         ->and($output)
         ->toContain('<?xml version="1.0" encoding="UTF-8"?>')
         ->toContain('CDATA')
         ->not->toContain(sprintf('⨯ %s', implode(DIRECTORY_SEPARATOR, [
-            'tests', 'Fixtures', 'with-fixable-issues', 'file.php',
+            'tests',
+            'Fixtures',
+            'with-fixable-issues',
+            'file.php',
         ])));
 });
 
@@ -76,12 +92,16 @@ it('outputs gitlab format', function () {
         '--format' => 'gitlab',
     ]);
 
-    expect($statusCode)->toBe(1)
+    expect($statusCode)
+        ->toBe(1)
         ->and($output)
         ->toBeJson()
         ->toContain('fingerprint')
         ->not->toContain(sprintf('⨯ %s', implode(DIRECTORY_SEPARATOR, [
-            'tests', 'Fixtures', 'with-fixable-issues', 'file.php',
+            'tests',
+            'Fixtures',
+            'with-fixable-issues',
+            'file.php',
         ])));
 });
 
@@ -94,15 +114,22 @@ it('outputs agent format with fail status on test mode', function () {
 
     $json = json_decode($output, true);
 
-    expect($statusCode)->toBe(1)
-        ->and($output)->toBeJson()
-        ->and($json['result'])->toBe('fail')
-        ->and($json)->toHaveKey('files')
-        ->and($json['files'][0])->toHaveKeys(['path', 'fixers'])
-        ->and($json['files'][0]['fixers'])->toBeArray()
-        ->and($json)->not->toHaveKey('about')
-        ->and($json)->not->toHaveKey('time')
-        ->and($json)->not->toHaveKey('memory');
+    expect($statusCode)
+        ->toBe(1)
+        ->and($output)
+        ->toBeJson()
+        ->and($json['result'])
+        ->toBe('fail')
+        ->and($json)
+        ->toHaveKey('files')
+        ->and($json['files'][0])
+        ->toHaveKeys(['path', 'fixers'])
+        ->and($json['files'][0]['fixers'])
+        ->toBe(['mago'])
+        ->and($json)
+        ->not->toHaveKey('about')->and($json)
+        ->not->toHaveKey('time')->and($json)
+        ->not->toHaveKey('memory');
 });
 
 it('outputs agent format with passed status when no issues', function () {
@@ -113,10 +140,14 @@ it('outputs agent format with passed status when no issues', function () {
 
     $json = json_decode($output, true);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)->toBeJson()
-        ->and($json['result'])->toBe('passed')
-        ->and($json)->not->toHaveKey('files');
+    expect($statusCode)
+        ->toBe(0)
+        ->and($output)
+        ->toBeJson()
+        ->and($json['result'])
+        ->toBe('passed')
+        ->and($json)
+        ->not->toHaveKey('files');
 });
 
 it('outputs agent format with fail status on parse errors', function () {
@@ -127,11 +158,16 @@ it('outputs agent format with fail status on parse errors', function () {
 
     $json = json_decode($output, true);
 
-    expect($statusCode)->toBe(1)
-        ->and($output)->toBeJson()
-        ->and($json['result'])->toBe('fail')
-        ->and($json)->toHaveKey('errors')
-        ->and($json['errors'][0])->toHaveKeys(['path', 'message']);
+    expect($statusCode)
+        ->toBe(1)
+        ->and($output)
+        ->toBeJson()
+        ->and($json['result'])
+        ->toBe('fail')
+        ->and($json)
+        ->toHaveKey('errors')
+        ->and($json['errors'][0])
+        ->toHaveKeys(['path', 'message']);
 });
 
 it('auto-detects agent format via OPENCODE env var', function () {
@@ -144,10 +180,14 @@ it('auto-detects agent format via OPENCODE env var', function () {
 
     $json = json_decode($output, true);
 
-    expect($statusCode)->toBe(1)
-        ->and($output)->toBeJson()
-        ->and($json)->toHaveKey('files')
-        ->and($json['files'][0])->toHaveKeys(['path', 'fixers']);
+    expect($statusCode)
+        ->toBe(1)
+        ->and($output)
+        ->toBeJson()
+        ->and($json)
+        ->toHaveKey('files')
+        ->and($json['files'][0])
+        ->toHaveKeys(['path', 'fixers']);
 });
 
 it('auto-detects agent format via CLAUDECODE env var', function () {
@@ -160,8 +200,12 @@ it('auto-detects agent format via CLAUDECODE env var', function () {
 
     $json = json_decode($output, true);
 
-    expect($statusCode)->toBe(1)
-        ->and($output)->toBeJson()
-        ->and($json)->toHaveKey('files')
-        ->and($json['files'][0])->toHaveKeys(['path', 'fixers']);
+    expect($statusCode)
+        ->toBe(1)
+        ->and($output)
+        ->toBeJson()
+        ->and($json)
+        ->toHaveKey('files')
+        ->and($json['files'][0])
+        ->toHaveKeys(['path', 'fixers']);
 });

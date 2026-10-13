@@ -78,7 +78,7 @@ class CollapseSingleAttribute implements PrettierPostFormatter
             return $wrapped;
         }
 
-        if ($index + 2 >= $lineCount) {
+        if (($index + 2) >= $lineCount) {
             return null;
         }
 
@@ -117,8 +117,13 @@ class CollapseSingleAttribute implements PrettierPostFormatter
      * @param  array<int, string>  $lines
      * @return array{string, int}|null
      */
-    private function tryCollapseWrappedAttribute(array $lines, int $lineCount, int $index, string $indent, string $tag): ?array
-    {
+    private function tryCollapseWrappedAttribute(
+        array $lines,
+        int $lineCount,
+        int $index,
+        string $indent,
+        string $tag,
+    ): ?array {
         $start = $index + 1;
 
         if ($start >= $lineCount) {
@@ -144,7 +149,7 @@ class CollapseSingleAttribute implements PrettierPostFormatter
             return null;
         }
 
-        if ($end + 1 >= $lineCount) {
+        if (($end + 1) >= $lineCount) {
             return null;
         }
 
@@ -177,9 +182,7 @@ class CollapseSingleAttribute implements PrettierPostFormatter
      */
     private function opensBladeAttribute(string $trimmed): bool
     {
-        return str_starts_with($trimmed, '@')
-            || str_starts_with($trimmed, '{{')
-            || str_starts_with($trimmed, '{!!');
+        return str_starts_with($trimmed, '@') || str_starts_with($trimmed, '{{') || str_starts_with($trimmed, '{!!');
     }
 
     /**
@@ -303,7 +306,7 @@ class CollapseSingleAttribute implements PrettierPostFormatter
         }
 
         if (str_ends_with($trimmed, $closingTag)) {
-            if ($start + 1 >= $lineCount || trim($lines[$start + 1]) !== '>') {
+            if (($start + 1) >= $lineCount || trim($lines[$start + 1]) !== '>') {
                 return null;
             }
 
@@ -312,7 +315,7 @@ class CollapseSingleAttribute implements PrettierPostFormatter
             return [$body, $start + 2];
         }
 
-        if ($start + 1 < $lineCount && trim($lines[$start + 1]) === $closingTag.'>') {
+        if (($start + 1) < $lineCount && trim($lines[$start + 1]) === $closingTag.'>') {
             return [substr($trimmed, 1), $start + 2];
         }
 

@@ -17,9 +17,7 @@ use LaravelZero\Framework\Application;
 |
 */
 
-$app = new Application(
-    dirname(__DIR__)
-);
+$app = new Application(dirname(__DIR__));
 
 /*
 |--------------------------------------------------------------------------
@@ -32,20 +30,11 @@ $app = new Application(
 |
 */
 
-$app->singleton(
-    Illuminate\Contracts\Console\Kernel::class,
-    Kernel::class
-);
+$app->singleton(Illuminate\Contracts\Console\Kernel::class, Kernel::class);
 
-$app->singleton(
-    ExceptionHandler::class,
-    Handler::class
-);
+$app->singleton(ExceptionHandler::class, Handler::class);
 
-$app->singleton(
-    Illuminate\Foundation\Bootstrap\HandleExceptions::class,
-    HandleExceptions::class
-);
+$app->singleton(Illuminate\Foundation\Bootstrap\HandleExceptions::class, HandleExceptions::class);
 
 /*
 |--------------------------------------------------------------------------

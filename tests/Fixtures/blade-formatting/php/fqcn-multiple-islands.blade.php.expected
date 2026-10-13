@@ -1,9 +1,13 @@
 <div>
-    <?php $a = \App\Models\Category::all(); ?>
+    <?php
+
+    $a = \App\Models\Category::all(); ?>
 
     <p>{{ count($a) }}</p>
 
-    <?php $b = \App\Models\Product::query()->count(); ?>
+    <?php
+
+    $b = \App\Models\Product::query()->count(); ?>
 
     <p>{{ $b }}</p>
 

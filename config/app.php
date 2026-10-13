@@ -6,7 +6,6 @@ use App\Providers\CommandsServiceProvider;
 use App\Providers\RepositoriesServiceProvider;
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Application Name
@@ -31,7 +30,7 @@ return [
     |
     */
 
-    'version' => '1.32.1',
+    'version' => '2.0.0-dev',
 
     /*
     |--------------------------------------------------------------------------
@@ -64,5 +63,4 @@ return [
         CommandsServiceProvider::class,
         RepositoriesServiceProvider::class,
     ],
-
 ];

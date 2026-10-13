@@ -19,9 +19,7 @@ class DedentHuggedTerminator implements PrettierPostFormatter
             $line = $lines[$index];
             $isBareTag = preg_match('/^<([A-Za-z][A-Za-z0-9:_.\-]*)$/', trim($line), $matches) === 1;
 
-            $terminator = $isBareTag
-                ? $this->findHuggedTerminator($lines, $lineCount, $index + 1, $matches[1])
-                : null;
+            $terminator = $isBareTag ? $this->findHuggedTerminator($lines, $lineCount, $index + 1, $matches[1]) : null;
 
             if ($terminator === null) {
                 $result[] = $line;

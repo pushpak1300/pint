@@ -21,7 +21,14 @@ class EmbeddedBladeMasker implements PrettierPostFormatter, PrettierPreFormatter
      * @var array<int, string>
      */
     private const BLOCK_CLOSERS = [
-        'endif', 'endunless', 'endforeach', 'endfor', 'endwhile', 'endisset', 'endempty', 'endswitch',
+        'endif',
+        'endunless',
+        'endforeach',
+        'endfor',
+        'endwhile',
+        'endisset',
+        'endempty',
+        'endswitch',
     ];
 
     /**
@@ -128,7 +135,7 @@ class EmbeddedBladeMasker implements PrettierPostFormatter, PrettierPreFormatter
             // An escaped "@@" renders as a literal "@" and is not a directive, but prettier's blade
             // plugin still re-indents the whole raw-text block around it — a little further on every
             // pass, so the file never converges. Mask it so prettier cannot see it.
-            if ($char === '@' && $offset + 1 < $length && $region[$offset + 1] === '@') {
+            if ($char === '@' && ($offset + 1) < $length && $region[$offset + 1] === '@') {
                 $result .= $this->escapedAtToken(quoted: false);
                 $offset += 2;
 
@@ -157,9 +164,7 @@ class EmbeddedBladeMasker implements PrettierPostFormatter, PrettierPreFormatter
                 continue;
             }
 
-            $context = $isCss
-                ? $this->cssContext($region, $offset)
-                : $this->jsContext($region, $offset);
+            $context = $isCss ? $this->cssContext($region, $offset) : $this->jsContext($region, $offset);
 
             $result .= $this->mask(substr($region, $offset, $span), $context);
             $offset += $span;
@@ -243,7 +248,7 @@ class EmbeddedBladeMasker implements PrettierPostFormatter, PrettierPreFormatter
         $char = $content[$offset];
 
         // Raw PHP open tags ("<?php" / short echo "<?=") through their close tag.
-        if ($char === '<' && $offset + 1 < $length && $content[$offset + 1] === '?') {
+        if ($char === '<' && ($offset + 1) < $length && $content[$offset + 1] === '?') {
             $end = strpos($content, '?>', $offset + 2);
             $end = $end === false ? $length : $end + 2;
 
@@ -260,7 +265,7 @@ class EmbeddedBladeMasker implements PrettierPostFormatter, PrettierPreFormatter
         }
 
         // Escaped "@@" is a literal "@", not a directive.
-        if ($offset + 1 < $length && $content[$offset + 1] === '@') {
+        if (($offset + 1) < $length && $content[$offset + 1] === '@') {
             return null;
         }
 
@@ -292,7 +297,7 @@ class EmbeddedBladeMasker implements PrettierPostFormatter, PrettierPreFormatter
             // "@php ... @endphp" block.
             $end = stripos($content, '@endphp', $cursor);
 
-            return $end === false ? null : ($end + strlen('@endphp')) - $offset;
+            return $end === false ? null : $end + strlen('@endphp') - $offset;
         }
 
         if ($this->isBlockOpener($content, $lower, $cursor, $length)) {
@@ -373,7 +378,7 @@ class EmbeddedBladeMasker implements PrettierPostFormatter, PrettierPreFormatter
                 continue;
             }
 
-            if ($offset + 1 < $length && $content[$offset + 1] === '@') {
+            if (($offset + 1) < $length && $content[$offset + 1] === '@') {
                 $offset += 2;
 
                 continue;
@@ -526,7 +531,8 @@ class EmbeddedBladeMasker implements PrettierPostFormatter, PrettierPreFormatter
         while (true) {
             $index = $this->counter++;
 
-            $collides = str_contains($this->original, "__PINT_BLADE_{$index}__")
+            $collides =
+                str_contains($this->original, "__PINT_BLADE_{$index}__")
                 || str_contains($this->original, "--pint-blade-{$index}");
 
             if (! $collides) {
@@ -599,19 +605,19 @@ class EmbeddedBladeMasker implements PrettierPostFormatter, PrettierPreFormatter
         if (substr($content, $offset, 4) === '{{--') {
             $end = strpos($content, '--}}', $offset + 4);
 
-            return $end === false ? null : ($end + 4) - $offset;
+            return $end === false ? null : $end + 4 - $offset;
         }
 
         if (substr($content, $offset, 3) === '{!!') {
             $end = strpos($content, '!!}', $offset + 3);
 
-            return $end === false ? null : ($end + 3) - $offset;
+            return $end === false ? null : $end + 3 - $offset;
         }
 
         if (substr($content, $offset, 2) === '{{') {
             $end = strpos($content, '}}', $offset + 2);
 
-            return $end === false ? null : ($end + 2) - $offset;
+            return $end === false ? null : $end + 2 - $offset;
         }
 
         return null;

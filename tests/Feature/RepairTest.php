@@ -16,9 +16,7 @@ it('exits with status 1 with fixes', function () {
         '--test' => false,
     ]);
 
-    expect($statusCode)->toBe(1)
-        ->and($output)
-        ->toContain('FIXED');
+    expect($statusCode)->toBe(1)->and($output)->toContain('FIXED');
 });
 
 it('exits with status 0 without fixes', function () {
@@ -28,7 +26,5 @@ it('exits with status 0 without fixes', function () {
         '--test' => false,
     ]);
 
-    expect($statusCode)->toBe(0)
-        ->and($output)
-        ->toContain('PASS');
+    expect($statusCode)->toBe(0)->and($output)->toContain('PASS');
 });

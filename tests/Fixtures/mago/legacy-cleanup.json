@@ -1,0 +1,205 @@
+[
+    {
+        "rules": {
+            "array_push": true
+        },
+        "input": "<?php array_push($values, 7); $n = array_push($values, 9);",
+        "expected": "<?php $values[] = 7; $n = array_push($values, 9);"
+    },
+    {
+        "rules": {
+            "array_push": true
+        },
+        "input": "<?php array_push($values, 7,);",
+        "expected": "<?php array_push($values, 7,);"
+    },
+    {
+        "rules": {
+            "backtick_to_shell_exec": true
+        },
+        "input": "<?php $text = `pwd`; $quoted = `echo \"hi\"`;",
+        "expected": "<?php $text = \\shell_exec(\"pwd\"); $quoted = `echo \"hi\"`;"
+    },
+    {
+        "rules": {
+            "date_time_immutable": true
+        },
+        "input": "<?php new DateTime; DateTime::createFromFormat(\"Y\", \"2026\"); DateTime::ATOM;",
+        "expected": "<?php new DateTimeImmutable; DateTimeImmutable::createFromFormat(\"Y\", \"2026\"); DateTime::ATOM;"
+    },
+    {
+        "rules": {
+            "date_time_immutable": true
+        },
+        "input": "<?php namespace A; use DateTime; function f(DateTime $d): DateTime { return new DateTime; }",
+        "expected": "<?php namespace A; use DateTime; function f(\\DateTimeImmutable $d): \\DateTimeImmutable { return new \\DateTimeImmutable; }"
+    },
+    {
+        "rules": {
+            "declare_strict_types": true
+        },
+        "input": "<?php declare(strict_types=0); function f($a) { return $a; }",
+        "expected": "<?php declare(strict_types=1); function f($a) { return $a; }"
+    },
+    {
+        "rules": {
+            "declare_strict_types": true
+        },
+        "input": "<?php function f($a) { return $a; }",
+        "expected": "<?php declare(strict_types=1);\nfunction f($a) { return $a; }"
+    },
+    {
+        "rules": {
+            "final_class": true
+        },
+        "input": "<?php /** @Entity */ class A {} class B {} abstract class C {}",
+        "expected": "<?php /** @Entity */ class A {} final class B {} abstract class C {}"
+    },
+    {
+        "rules": {
+            "final_internal_class": true
+        },
+        "input": "<?php /** @internal */ class A {} class B {}",
+        "expected": "<?php /** @internal */ final class A {} class B {}"
+    },
+    {
+        "rules": {
+            "final_public_method_for_abstract_class": true
+        },
+        "input": "<?php abstract class A { public function run() {} public function __construct() {} public function __serialize() {} }",
+        "expected": "<?php abstract class A { final public function run() {} public function __construct() {} final public function __serialize() {} }"
+    },
+    {
+        "rules": {
+            "fully_qualified_strict_types": true
+        },
+        "input": "<?php namespace A; use Vendor\\Foo as F; function f(\\Vendor\\Foo $a): \\Vendor\\Other { return new \\Vendor\\Other; }",
+        "expected": "<?php namespace A; use Vendor\\Foo as F; function f(F $a): \\Vendor\\Other { return new \\Vendor\\Other; }"
+    },
+    {
+        "rules": {
+            "fully_qualified_strict_types": true
+        },
+        "input": "<?php namespace A; /** @return array<\\Vendor\\Foo> */ function f() {}",
+        "expected": "<?php namespace A; /** @return array<\\Vendor\\Foo> */ function f() {}"
+    },
+    {
+        "rules": {
+            "global_namespace_import": true
+        },
+        "input": "<?php namespace A; new \\DateTime;",
+        "expected": "<?php namespace A;\nuse DateTime;\n new DateTime;"
+    },
+    {
+        "rules": {
+            "global_namespace_import": true
+        },
+        "input": "<?php namespace A; new DateTime; new \\DateTime;",
+        "expected": "<?php namespace A;\n new DateTime; new \\DateTime;"
+    },
+    {
+        "rules": {
+            "mb_str_functions": true
+        },
+        "input": "<?php $a = strlen($b); $c = strlen($b, 2); $d = \\strtolower($b);",
+        "expected": "<?php $a = mb_strlen($b); $c = strlen($b, 2); $d = \\mb_strtolower($b);"
+    },
+    {
+        "rules": {
+            "mb_str_functions": true
+        },
+        "input": "<?php namespace A; use function strlen; $a = strlen($b);",
+        "expected": "<?php namespace A; use function mb_strlen; $a = mb_strlen($b);"
+    },
+    {
+        "rules": {
+            "modernize_types_casting": true
+        },
+        "input": "<?php $a = intval($b); $c = intval($b, 10); $d = floatval($b + $c);",
+        "expected": "<?php $a = (int) $b; $c = intval($b, 10); $d = (float) ($b + $c);"
+    },
+    {
+        "rules": {
+            "no_superfluous_elseif": true
+        },
+        "input": "<?php if ($a) { return; } elseif ($b) { work(); } else { last(); }",
+        "expected": "<?php if ($a) { return; } if ($b) { work(); } else { last(); }"
+    },
+    {
+        "rules": {
+            "no_superfluous_elseif": true
+        },
+        "input": "<?php if ($a) { return; unreachable(); } elseif ($b) { work(); }",
+        "expected": "<?php if ($a) { return; unreachable(); } elseif ($b) { work(); }"
+    },
+    {
+        "rules": {
+            "no_useless_else": true
+        },
+        "input": "<?php if ($a) { return; } else { work(); }",
+        "expected": "<?php if ($a) { return; }   work(); "
+    },
+    {
+        "rules": {
+            "no_useless_else": true
+        },
+        "input": "<?php if ($a) { return; } else { function named() {} }",
+        "expected": "<?php if ($a) { return; } else { function named() {} }"
+    },
+    {
+        "rules": {
+            "ordered_class_elements": true
+        },
+        "input": "<?php class A { private function z() {} public function b() {} public function a() {} protected $p; public const X=1; }",
+        "expected": "<?php class A { public const X=1; protected $p; public function b() {} public function a() {} private function z() {} }"
+    },
+    {
+        "rules": {
+            "ordered_interfaces": true
+        },
+        "input": "<?php class A implements Zebra, Alpha, Bee {}",
+        "expected": "<?php class A implements Alpha, Bee, Zebra {}"
+    },
+    {
+        "rules": {
+            "ordered_traits": true
+        },
+        "input": "<?php class A { use C, B; use D, A; }",
+        "expected": "<?php class A { use A, D; use B, C; }"
+    },
+    {
+        "rules": {
+            "protected_to_private": true
+        },
+        "input": "<?php final class A { protected $p; protected function x(){} } final class B extends C { protected $p; }",
+        "expected": "<?php final class A { private $p; private function x(){} } final class B extends C { protected $p; }"
+    },
+    {
+        "rules": {
+            "self_accessor": true
+        },
+        "input": "<?php namespace N; class A { function f(\\N\\A $a): A { return new A; } }",
+        "expected": "<?php namespace N; class A { function f(self $a): self { return new self; } }"
+    },
+    {
+        "rules": {
+            "self_static_accessor": true
+        },
+        "input": "<?php final class A { function f(): static { return new static; } } class B { function f() { return new static; } }",
+        "expected": "<?php final class A { function f(): static { return new self; } } class B { function f() { return new static; } }"
+    },
+    {
+        "rules": {
+            "strict_comparison": true
+        },
+        "input": "<?php $a = $b == $c; $d = $b != $c; $e = $b <> $c;",
+        "expected": "<?php $a = $b === $c; $d = $b !== $c; $e = $b !== $c;"
+    },
+    {
+        "rules": {
+            "visibility_required": true
+        },
+        "input": "<?php class A { const X=1; var $p; function f() {} }",
+        "expected": "<?php class A { public const X=1; public $p; public function f() {} }"
+    }
+]

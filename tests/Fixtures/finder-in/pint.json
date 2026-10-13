@@ -1,9 +1,11 @@
 {
-    "preset": "empty",
+    "preset": "laravel",
     "in": [
         "included"
     ],
-    "rules": {
-        "no_unused_imports": true
+    "linter": {
+        "rules": {
+            "no-redundant-use": { "enabled": true }
+        }
     }
 }

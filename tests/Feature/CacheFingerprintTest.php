@@ -2,7 +2,6 @@
 
 use App\Actions\EnsurePrettierIsConfigured;
 use App\BladeFormatter;
-use App\Fixers\LaravelBlade\Fixer;
 use App\Repositories\ConfigurationJsonRepository;
 use App\Support\Prettier;
 
@@ -10,7 +9,7 @@ beforeEach(function () {
     $prettier = new Prettier(getcwd());
 
     $this->action = new EnsurePrettierIsConfigured($prettier, new ConfigurationJsonRepository(null, null));
-    $this->fixer = new Fixer(new BladeFormatter($prettier));
+    $this->fixer = new BladeFormatter($prettier);
 
     $this->probes = [
         'prettier' => ['resolved' => true, 'version' => '3.8.4'],
@@ -23,8 +22,7 @@ it('computes a stable fingerprint from the probed package versions', function ()
     $first = $this->action->fingerprint($this->fixer, $this->probes);
     $second = $this->action->fingerprint($this->fixer, array_reverse($this->probes, true));
 
-    expect($first)->toMatch('/^[a-f0-9]{32}$/')
-        ->and($second)->toBe($first);
+    expect($first)->toMatch('/^[a-f0-9]{32}$/')->and($second)->toBe($first);
 });
 
 it('changes the fingerprint when a prettier package version changes', function () {
@@ -46,4 +44,8 @@ it('changes the fingerprint when the pint version changes', function () {
 
 it('exposes no cache fingerprints before prettier is configured', function () {
     expect($this->action->cacheFingerprints())->toBe([]);
+});
+
+it('gets its required packages directly from the Blade formatter', function () {
+    expect($this->action->requiredPackages())->toBe($this->fixer->prettierDependencies());
 });

@@ -1,6 +1,6 @@
 <?php
 
-use App\Commands\DefaultCommand;
+use App\Commands\QualityCommand;
 use Illuminate\Console\Scheduling\ScheduleFinishCommand;
 use Illuminate\Console\Scheduling\ScheduleRunCommand;
 use LaravelZero\Framework\Commands\BuildCommand;
@@ -14,7 +14,6 @@ use NunoMaduro\LaravelConsoleSummary\SummaryCommand;
 use Symfony\Component\Console\Command\DumpCompletionCommand;
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Default Command
@@ -26,7 +25,7 @@ return [
     |
     */
 
-    'default' => DefaultCommand::class,
+    'default' => QualityCommand::class,
 
     /*
     |--------------------------------------------------------------------------
@@ -101,5 +100,4 @@ return [
         // Symfony...
         DumpCompletionCommand::class,
     ],
-
 ];

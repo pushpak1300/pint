@@ -36,14 +36,8 @@
     @endif
 
     {{-- One-line raw php if without else --}}
-    <p><?php if ($admin) {
-        echo 'Admin';
-    } ?></p>
+    <p><?php if ($admin) echo 'Admin'; ?></p>
 
     {{-- One-line raw php if with else --}}
-    <p><?php if ($admin) {
-        echo 'Admin';
-    } else {
-        echo 'Guest';
-    } ?></p>
+    <p><?php if ($admin) echo 'Admin'; else echo 'Guest'; ?></p>
 </div>

@@ -60,9 +60,7 @@ class AlpineMaskPatterns implements PrettierPostFormatter, PrettierPreFormatter
                 // that also appears inside the attribute name (e.g. "a" in "x-mask") is left alone.
                 $position = $valueOffset - $wholeOffset;
 
-                return substr($whole, 0, $position)
-                    .$token
-                    .substr($whole, $position + strlen($value));
+                return substr($whole, 0, $position).$token.substr($whole, $position + strlen($value));
             },
             $content,
             flags: PREG_OFFSET_CAPTURE,

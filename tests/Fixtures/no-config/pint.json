@@ -1,7 +1,5 @@
 {
-    "rules": {
-        "concat_space": {
-            "spacing": "none"
-        }
+    "formatter": {
+        "space-around-concat-operator": false
     }
 }

@@ -2,16 +2,8 @@
 
 namespace App\Factories;
 
-use App\Actions\EnsurePrettierIsConfigured;
-use App\BladeFormatter;
-use App\Fixers\LaravelBlade\Fixer;
-use App\Fixers\PrettierCacheFingerprint;
 use App\Repositories\ConfigurationJsonRepository;
-use PhpCsFixer\Config;
-use PhpCsFixer\ConfigInterface;
-use PhpCsFixer\Finder;
-use PhpCsFixer\Fixer\FixerInterface;
-use PhpCsFixer\Runner\Parallel\ParallelConfigFactory;
+use Symfony\Component\Finder\Finder;
 
 class ConfigurationFactory
 {
@@ -37,63 +29,30 @@ class ConfigurationFactory
         'build',
         'node_modules',
         'storage',
+        'vendor',
     ];
-
-    /**
-     * Creates a PHP CS Fixer Configuration with the given array of rules.
-     *
-     * @param  array<string, array<string, array<int|string, string|int|string[]>|bool|string>|bool>  $rules
-     * @return ConfigInterface
-     */
-    public static function preset($rules)
-    {
-        $mergedRules = array_merge($rules, resolve(ConfigurationJsonRepository::class)->rules());
-
-        $fingerprints = resolve(EnsurePrettierIsConfigured::class)->cacheFingerprints();
-
-        if ($fingerprints !== []) {
-            $mergedRules[(new PrettierCacheFingerprint)->getName()] = ['fingerprints' => $fingerprints];
-        }
-
-        return (new Config)
-            ->setParallelConfig(ParallelConfigFactory::detect())
-            ->setFinder(self::finder())
-            ->setRules($mergedRules)
-            ->setRiskyAllowed(true)
-            ->setUsingCache(true)
-            ->setUnsupportedPhpVersionAllowed(true)
-            ->registerCustomFixers(self::customFixers());
-    }
-
-    /**
-     * The list of custom fixers Pint registers.
-     *
-     * @return array<int, FixerInterface>
-     */
-    public static function customFixers()
-    {
-        return [
-            new Fixer(resolve(BladeFormatter::class)),
-            new PrettierCacheFingerprint,
-        ];
-    }
 
     /**
      * Creates the finder instance.
      *
      * @return Finder
      */
-    public static function finder()
+    public static function finder(bool $includeConfiguredPaths = true)
     {
         $localConfiguration = resolve(ConfigurationJsonRepository::class);
 
         $finder = Finder::create()
+            ->files()
+            ->name('*.php')
             ->notName(static::notName())
             ->exclude(static::$exclude)
             ->ignoreDotFiles(true)
             ->ignoreVCS(true);
 
         foreach ($localConfiguration->finder() as $method => $arguments) {
+            if ($method === 'in' && ! $includeConfiguredPaths) {
+                continue;
+            }
             if (! method_exists($finder, $method)) {
                 abort(1, sprintf('Option [%s] is not valid.', $method));
             }
@@ -127,9 +86,7 @@ class ConfigurationFactory
      */
     protected static function shouldExcludeBladeFiles()
     {
-        $rules = resolve(ConfigurationJsonRepository::class)->rules();
-
-        return ($rules['Pint/laravel_blade'] ?? false) === false;
+        return ! resolve(ConfigurationJsonRepository::class)->blade();
     }
 
     /**
@@ -140,9 +97,7 @@ class ConfigurationFactory
         $localConfiguration = resolve(ConfigurationJsonRepository::class);
         $basePath = getcwd();
 
-        $relativePath = str_starts_with($filePath, $basePath)
-            ? substr($filePath, strlen($basePath) + 1)
-            : $filePath;
+        $relativePath = str_starts_with($filePath, $basePath) ? substr($filePath, strlen($basePath) + 1) : $filePath;
 
         $relativePath = str_replace('\\', '/', $relativePath);
         $fileName = basename($filePath);

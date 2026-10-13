@@ -5,8 +5,7 @@ declare(strict_types=1);
 use Livewire\Component;
 use Modules\ProfitabilityCalculator\Enums\ViewMode;
 
-new class extends Component
-{
+new class extends Component {
     public string $viewMode;
 }; ?>
 

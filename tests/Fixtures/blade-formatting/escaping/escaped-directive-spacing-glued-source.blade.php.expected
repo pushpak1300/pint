@@ -1,4 +1,6 @@
-<?php $mail = 'user@@example'; ?>
+<?php
+
+$mail = 'user@@example'; ?>
 
 <div>Text @@if more</div>
 

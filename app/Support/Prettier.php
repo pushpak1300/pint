@@ -6,6 +6,7 @@ use App\Enums\NodePackageManager;
 use App\Exceptions\PrettierException;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Phar;
 use Symfony\Component\Process\InputStream;
 use Symfony\Component\Process\Process;
 
@@ -38,8 +39,9 @@ class Prettier
     /**
      * Create a new prettier instance.
      */
-    public function __construct(protected string $projectRoot)
-    {
+    public function __construct(
+        protected string $projectRoot,
+    ) {
         //
     }
 
@@ -66,7 +68,8 @@ class Prettier
         $this->inputStream->write(json_encode([
             'path' => $path,
             'content' => $content,
-        ], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE)."\n");
+        ], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE)
+            ."\n");
 
         // Accumulate every chunk; the OS pipe may split the response across reads.
         $formatted = '';
@@ -88,8 +91,7 @@ class Prettier
             }
 
             if (! $this->process->isRunning()) {
-                $error = $this->process->getErrorOutput()
-                    ?: 'Laravel Pint\'s Prettier worker terminated unexpectedly.';
+                $error = $this->process->getErrorOutput() ?: 'Laravel Pint\'s Prettier worker terminated unexpectedly.';
 
                 break;
             }
@@ -146,16 +148,16 @@ class Prettier
             return;
         }
 
-        $this->process = new Process(
-            [$this->runtimeBinary(), $this->workerPath(), $this->projectRoot, $this->configPath()],
+        $this->process = new Process([
+            $this->runtimeBinary(),
+            $this->workerPath(),
             $this->projectRoot,
-        );
+            $this->configPath(),
+        ], $this->projectRoot);
 
         $this->process->setTty(false);
 
-        $this->process->setInput(
-            $this->inputStream = new InputStream,
-        );
+        $this->process->setInput($this->inputStream = new InputStream);
 
         $this->process->start();
     }
@@ -218,7 +220,7 @@ class Prettier
      */
     protected function resourcePath(string $file): string
     {
-        $phar = \Phar::running(false);
+        $phar = Phar::running(false);
 
         // Inside a PHAR the package root is two levels up; else base_path().
         $root = $phar === '' ? base_path() : dirname($phar, 2);

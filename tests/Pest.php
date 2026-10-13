@@ -56,7 +56,13 @@ class TestConsoleOutput extends BufferedOutput implements ConsoleOutputInterface
     {
         $sections = [];
 
-        return new ConsoleSectionOutput($this->getStream() ?: fopen('php://memory', 'rw+'), $sections, $this->getVerbosity(), $this->isDecorated(), $this->getFormatter());
+        return new ConsoleSectionOutput(
+            $this->getStream() ?: fopen('php://memory', 'rw+'),
+            $sections,
+            $this->getVerbosity(),
+            $this->isDecorated(),
+            $this->getFormatter(),
+        );
     }
 
     public function fetchError(): string
@@ -79,52 +85,48 @@ class TestConsoleOutput extends BufferedOutput implements ConsoleOutputInterface
 |
 */
 
-uses(TestCase::class)
-    ->beforeEach(function () {
-        foreach ([
-            'AI_AGENT',
-            'CLAUDE_CODE_IS_COWORK',
-            'CURSOR_AGENT',
-            'GEMINI_CLI',
-            'CODEX_SANDBOX',
-            'CODEX_CI',
-            'CODEX_THREAD_ID',
-            'AUGMENT_AGENT',
-            'OPENCODE_CLIENT',
-            'OPENCODE',
-            'AMP_CURRENT_THREAD_ID',
-            'CLAUDECODE',
-            'CLAUDE_CODE',
-            'REPL_ID',
-            'COPILOT_MODEL',
-            'COPILOT_ALLOW_ALL',
-            'COPILOT_GITHUB_TOKEN',
-            'COPILOT_CLI',
-            'ANTIGRAVITY_AGENT',
-            'PI_CODING_AGENT',
-            'KIRO_AGENT_PATH',
-        ] as $variable) {
-            putenv($variable);
-        }
-    })
-    ->in('Feature');
+uses(TestCase::class)->beforeEach(function () {
+    foreach ([
+        'AI_AGENT',
+        'CLAUDE_CODE_IS_COWORK',
+        'CURSOR_AGENT',
+        'GEMINI_CLI',
+        'CODEX_SANDBOX',
+        'CODEX_CI',
+        'CODEX_THREAD_ID',
+        'AUGMENT_AGENT',
+        'OPENCODE_CLIENT',
+        'OPENCODE',
+        'AMP_CURRENT_THREAD_ID',
+        'CLAUDECODE',
+        'CLAUDE_CODE',
+        'REPL_ID',
+        'COPILOT_MODEL',
+        'COPILOT_ALLOW_ALL',
+        'COPILOT_GITHUB_TOKEN',
+        'COPILOT_CLI',
+        'ANTIGRAVITY_AGENT',
+        'PI_CODING_AGENT',
+        'KIRO_AGENT_PATH',
+    ] as $variable) {
+        putenv($variable);
+    }
+})->in('Feature');
 
-uses()
-    ->beforeEach(function () {
-        static $nodeIsAvailable = null;
+uses()->beforeEach(function () {
+    static $nodeIsAvailable = null;
 
-        if ($nodeIsAvailable === null) {
-            $node = new Process(['node', '--version']);
-            $node->run();
+    if ($nodeIsAvailable === null) {
+        $node = new Process(['node', '--version']);
+        $node->run();
 
-            $nodeIsAvailable = $node->isSuccessful();
-        }
+        $nodeIsAvailable = $node->isSuccessful();
+    }
 
-        if (! $nodeIsAvailable) {
-            $this->markTestSkipped('Node is required to run the blade formatter.');
-        }
-    })
-    ->in('Feature/Blade');
+    if (! $nodeIsAvailable) {
+        $this->markTestSkipped('Node is required to run the blade formatter.');
+    }
+})->in('Feature/Blade');
 
 function testOutputFile(): string
 {
@@ -150,9 +152,7 @@ function run($command, $arguments)
         $arguments['path'] = [$arguments['path']];
     }
 
-    $commandInstance = match ($command) {
-        'default' => resolve(DefaultCommand::class),
-    };
+    $commandInstance = match ($command) { 'default' => resolve(DefaultCommand::class) };
 
     // Strip global Symfony options — the command definition in tests excludes them because Application::mergeApplicationDefinition() is not called in the test path.
     $inputArguments = array_diff_key($arguments, array_flip(['--quiet', '-q']));
@@ -197,10 +197,7 @@ function bladeFixtureFiles(bool $includeIgnorables = true): array
     $files = bladeFixtureFilesIn(bladeFixtureRoot());
 
     if (! $includeIgnorables) {
-        $files = array_values(array_filter(
-            $files,
-            fn (string $file): bool => ! str_starts_with($file, 'ignorables/'),
-        ));
+        $files = array_values(array_filter($files, fn (string $file): bool => ! str_starts_with($file, 'ignorables/')));
     }
 
     return $files;
@@ -214,9 +211,7 @@ function bladeFixtureFiles(bool $includeIgnorables = true): array
  */
 function bladeFixtureFilesIn(string $root): array
 {
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
-    );
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS));
 
     $files = [];
 
@@ -232,14 +227,14 @@ function bladeFixtureFilesIn(string $root): array
 }
 
 /**
- * Run "pint --blade" once over a staged temporary project, asserting it exits
+ * Run "pint format --blade" once over a staged temporary project, asserting it exits
  * cleanly. The caller is responsible for staging the files beforehand.
  */
 function runPintBlade(string $tmp, bool $parallel = false): void
 {
     file_put_contents($tmp.'/pint.json', '{"preset":"laravel"}'."\n");
 
-    $command = ['php', 'pint', '--blade'];
+    $command = ['php', 'pint', 'format', '--blade'];
 
     if ($parallel) {
         $command[] = '--parallel';
@@ -252,10 +247,8 @@ function runPintBlade(string $tmp, bool $parallel = false): void
     $process->setTimeout(120);
     $process->run();
 
-    expect($process->getExitCode())->toBe(
-        0,
-        'pint --blade failed: '.$process->getErrorOutput().$process->getOutput(),
-    );
+    expect($process->getExitCode())
+        ->toBe(0, 'pint --blade failed: '.$process->getErrorOutput().$process->getOutput());
 }
 
 /**
@@ -277,8 +270,13 @@ function freshBladeTempDirectory(): string
  * The file is read from "$sourceRoot/$relative" and written, under an optional
  * "$targetPrefix" subdirectory, at the same relative path inside "$tmp".
  */
-function stageBladeFixture(string $tmp, string $sourceRoot, string $relative, bool $fromExpected = false, string $targetPrefix = ''): void
-{
+function stageBladeFixture(
+    string $tmp,
+    string $sourceRoot,
+    string $relative,
+    bool $fromExpected = false,
+    string $targetPrefix = '',
+): void {
     $target = $tmp.'/'.$targetPrefix.$relative;
     @mkdir(dirname($target), 0777, true);
 
@@ -386,10 +384,11 @@ function bladeFixtureTest(string $group): void
         it('leaves every ignorable fixture untouched', function (string $file) use ($group) {
             $tmp = formatBladeFixtureGroup($group);
 
-            expect(file_get_contents($tmp.'/'.$file))->toBe(
-                file_get_contents(bladeFixtureGroupRoot($group).'/'.$file.'.expected'),
-                "Ignorable fixture [{$group}/{$file}] was modified but should have been skipped.",
-            );
+            expect(file_get_contents($tmp.'/'.$file))
+                ->toBe(
+                    file_get_contents(bladeFixtureGroupRoot($group).'/'.$file.'.expected'),
+                    "Ignorable fixture [{$group}/{$file}] was modified but should have been skipped.",
+                );
         })->with(fn () => bladeFixtureGroupFiles($group));
 
         return;
@@ -398,19 +397,21 @@ function bladeFixtureTest(string $group): void
     it('formats every fixture to its golden file', function (string $file) use ($group) {
         $tmp = formatBladeFixtureGroup($group);
 
-        expect(file_get_contents($tmp.'/input/'.$file))->toBe(
-            file_get_contents(bladeFixtureGroupRoot($group).'/'.$file.'.expected'),
-            "Formatted output does not match the golden file for [{$group}/{$file}].",
-        );
+        expect(file_get_contents($tmp.'/input/'.$file))
+            ->toBe(
+                file_get_contents(bladeFixtureGroupRoot($group).'/'.$file.'.expected'),
+                "Formatted output does not match the golden file for [{$group}/{$file}].",
+            );
     })->with(fn () => bladeFixtureGroupFiles($group));
 
     it('re-formats every golden file unchanged (idempotent)', function (string $file) use ($group) {
         $tmp = formatBladeFixtureGroup($group);
 
-        expect(file_get_contents($tmp.'/golden/'.$file))->toBe(
-            file_get_contents(bladeFixtureGroupRoot($group).'/'.$file.'.expected'),
-            "Re-formatting the golden file changed it for [{$group}/{$file}] (not idempotent).",
-        );
+        expect(file_get_contents($tmp.'/golden/'.$file))
+            ->toBe(
+                file_get_contents(bladeFixtureGroupRoot($group).'/'.$file.'.expected'),
+                "Re-formatting the golden file changed it for [{$group}/{$file}] (not idempotent).",
+            );
     })->with(fn () => bladeFixtureGroupFiles($group));
 }
 

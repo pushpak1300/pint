@@ -9,9 +9,12 @@ class Envoy
      */
     public function __invoke(string $path): bool
     {
-        return in_array(basename($path), [
-            'envoy.blade.php',
-            'Envoy.blade.php',
-        ]);
+        return in_array(
+            basename($path),
+            [
+                'envoy.blade.php',
+                'Envoy.blade.php',
+            ],
+        );
     }
 }

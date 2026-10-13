@@ -4,8 +4,7 @@ use App\Models\User;
 use Illuminate\View\Component;
 use Livewire\Volt\Component as VoltComponent;
 
-new class extends Component
-{
+new class extends Component {
     public array $items = [
         'first',
         'second',

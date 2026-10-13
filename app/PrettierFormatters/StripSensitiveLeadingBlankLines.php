@@ -70,7 +70,7 @@ class StripSensitiveLeadingBlankLines implements PrettierPostFormatter
 
         $end = $this->openTagEnd($trimmed);
 
-        if ($end === null || $end !== strlen($trimmed) - 1 || ($end > 0 && $trimmed[$end - 1] === '/')) {
+        if ($end === null || $end !== (strlen($trimmed) - 1) || $end > 0 && $trimmed[$end - 1] === '/') {
             return false;
         }
 
